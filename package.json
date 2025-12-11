@@ -1,0 +1,9 @@
+{
+  "name": "oinio-soul-system",
+  "version": "1.0.0",
+  "description": "A private encrypted oracle for soul evolution",
+  "main": "oinio-system.js",
+  "scripts": {
+    "start": "node oinio-system.js"
+  }
+}
