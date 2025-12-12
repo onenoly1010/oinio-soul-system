@@ -15,6 +15,29 @@ const path = require('path');
 const readline = require('readline');
 
 // ═══════════════════════════════════════════════════════════════
+// ⚡ QUANTUM FORGE BRIDGE (OPTIONAL ENHANCEMENT)
+// ═══════════════════════════════════════════════════════════════
+let quantumBridge = null;
+let isQuantumAvailable = false;
+
+try {
+  // Attempt to load quantum bridge if available
+  const bridgePath = path.join(__dirname, 'oinio-forge-bridge.js');
+  if (fs.existsSync(bridgePath)) {
+    quantumBridge = require('./oinio-forge-bridge.js');
+    // Check if forge is actually available
+    quantumBridge.isForgeAvailable().then(available => {
+      isQuantumAvailable = available;
+    }).catch(() => {
+      isQuantumAvailable = false;
+    });
+  }
+} catch (err) {
+  // Silently continue without quantum enhancement
+  console.log('⚡ Quantum Forge not detected, using standard oracle mode');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 🛡️ PKG-SAFE PATH RESOLUTION
 // ═══════════════════════════════════════════════════════════════
 const getBasePath = () => {
@@ -231,7 +254,28 @@ function consultOracle(question, seed, epochNumber) {
   const messageIndex = hash.readUInt32BE(8) % messages.length;
   const message = messages[messageIndex];
   
-  return { resonance, clarity, flux, emergence, pattern, message };
+  return { mode: 'deterministic', resonance, clarity, flux, emergence, pattern, message };
+}
+
+/**
+ * Quantum-enhanced oracle consultation (uses bridge if available)
+ */
+async function consultQuantumOracle(question, seed, epochNumber, useQuantum = false) {
+  // Base deterministic reading
+  const reading = consultOracle(question, seed, epochNumber);
+  
+  // If quantum mode requested and available, enhance
+  if (useQuantum && quantumBridge && isQuantumAvailable) {
+    try {
+      const enhanced = await quantumBridge.consultQuantumOracle(question, seed, epochNumber);
+      return enhanced;
+    } catch (err) {
+      // Fall back to deterministic on error
+      return reading;
+    }
+  }
+  
+  return reading;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -254,6 +298,11 @@ function question(rl, prompt) {
 function displayBanner() {
   console.log('\n═══════════════════════════════════════════════════════════════');
   console.log('     🌾🌌 OINIO SOUL SYSTEM — Pattern Recognition Oracle');
+  console.log('═══════════════════════════════════════════════════════════════');
+  if (isQuantumAvailable) {
+    console.log('     ⚡ Quantum Forge Bridge: ACTIVE');
+    console.log('     Pattern + Trajectory = Navigation');
+  }
   console.log('═══════════════════════════════════════════════════════════════\n');
 }
 
@@ -267,29 +316,65 @@ function displayMenu() {
   console.log('└─────────────────────────────────────┘\n');
 }
 
-function displaySoulMenu(soul) {
+function displaySoulMenu(soul, quantumMode = false) {
+  const qSymbol = quantumMode ? '⚡' : '  ';
   console.log(`\n┌─────────────────────────────────────┐`);
   console.log(`│  Soul: ${soul.name.padEnd(28)}│`);
   console.log(`├─────────────────────────────────────┤`);
   console.log(`│  [1] New Epoch (Ask Question)       │`);
   console.log(`│  [2] View Epoch History             │`);
   console.log(`│  [3] Soul Statistics                │`);
+  if (isQuantumAvailable) {
+    console.log(`│${qSymbol}[Q] Toggle Quantum Mode            │`);
+  }
   console.log(`│  [4] Return to Main Menu            │`);
-  console.log(`└─────────────────────────────────────┘\n`);
+  console.log(`└─────────────────────────────────────┘`);
+  if (isQuantumAvailable) {
+    console.log(`  Quantum Mode: ${quantumMode ? '⚡ ACTIVE' : 'Standard'}`);
+  }
+  console.log();
 }
 
 function displayReading(reading, epochNumber) {
+  const modeLabel = reading.mode === 'quantum-enhanced' ? 'QUANTUM-ENHANCED' : 'DETERMINISTIC';
+  
   console.log('\n╔═══════════════════════════════════════════════════════════════╗');
-  console.log(`║  🔮 EPOCH ${epochNumber} READING`);
+  console.log(`║  🔮 EPOCH ${epochNumber} READING [${modeLabel}]`);
   console.log('╠═══════════════════════════════════════════════════════════════╣');
   console.log(`║  Resonance: ${'█'.repeat(Math.floor(reading.resonance / 5))}${' '.repeat(20 - Math.floor(reading.resonance / 5))} ${reading.resonance}%`);
   console.log(`║  Clarity:   ${'█'.repeat(Math.floor(reading.clarity / 5))}${' '.repeat(20 - Math.floor(reading.clarity / 5))} ${reading.clarity}%`);
   console.log(`║  Flux:      ${'█'.repeat(Math.floor(reading.flux / 5))}${' '.repeat(20 - Math.floor(reading.flux / 5))} ${reading.flux}%`);
   console.log(`║  Emergence: ${'█'.repeat(Math.floor(reading.emergence / 5))}${' '.repeat(20 - Math.floor(reading.emergence / 5))} ${reading.emergence}%`);
+  
+  // Quantum harmony layer
+  if (reading.harmonyIndex !== undefined) {
+    const harmonyPercent = Math.round(reading.harmonyIndex * 100);
+    console.log('╠═══════════════════════════════════════════════════════════════╣');
+    console.log(`║  ⚡ Harmony: ${'█'.repeat(Math.floor(harmonyPercent / 5))}${' '.repeat(20 - Math.floor(harmonyPercent / 5))} ${harmonyPercent}%`);
+    console.log(`║  Trend: ${reading.quantumTrend} (${Math.round(reading.quantumConfidence * 100)}% confidence)`);
+  }
+  
   console.log('╠═══════════════════════════════════════════════════════════════╣');
   console.log(`║  🌌 Pattern: ${reading.pattern}`);
   console.log('╠═══════════════════════════════════════════════════════════════╣');
   console.log(`║  📜 Oracle: "${reading.message}"`);
+  
+  // Quantum insights
+  if (reading.quantumInsight) {
+    console.log('╠═══════════════════════════════════════════════════════════════╣');
+    console.log(`║  ⚡ Quantum Insight:`);
+    console.log(`║  ${reading.quantumInsight.substring(0, 60)}`);
+  }
+  
+  // Forge recommendations
+  if (reading.forgeRecommendations && reading.forgeRecommendations.length > 0) {
+    console.log('╠═══════════════════════════════════════════════════════════════╣');
+    console.log('║  🔧 Forge Guidance:');
+    reading.forgeRecommendations.slice(0, 2).forEach(rec => {
+      console.log(`║  • ${rec.substring(0, 58)}`);
+    });
+  }
+  
   console.log('╚═══════════════════════════════════════════════════════════════╝\n');
 }
 
@@ -299,12 +384,13 @@ function displayReading(reading, epochNumber) {
 
 async function runSoulMenu(soul, soulRegistry, key) {
   const rl = createInterface();
+  let quantumMode = false;
   
   while (true) {
-    displaySoulMenu(soul);
+    displaySoulMenu(soul, quantumMode);
     const choice = await question(rl, '→ ');
     
-    switch (choice) {
+    switch (choice.toLowerCase()) {
       case '1': {
         // New Epoch
         const q = await question(rl, '\n🌾 Ask your question: ');
@@ -314,7 +400,7 @@ async function runSoulMenu(soul, soulRegistry, key) {
         }
         
         const epochNumber = soul.epochs.length + 1;
-        const reading = consultOracle(q, soul.seed, epochNumber);
+        const reading = await consultQuantumOracle(q, soul.seed, epochNumber, quantumMode);
         
         soul.epochs.push({
           number: epochNumber,
@@ -327,6 +413,17 @@ async function runSoulMenu(soul, soulRegistry, key) {
         
         displayReading(reading, epochNumber);
         saveSouls(soulRegistry, key);
+        break;
+      }
+      
+      case 'q': {
+        // Toggle quantum mode
+        if (isQuantumAvailable) {
+          quantumMode = !quantumMode;
+          console.log(`\n⚡ Quantum Mode ${quantumMode ? 'ACTIVATED' : 'DEACTIVATED'}\n`);
+        } else {
+          console.log('\n⚠️  Quantum Forge not available.\n');
+        }
         break;
       }
       
