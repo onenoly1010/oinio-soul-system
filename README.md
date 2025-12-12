@@ -20,6 +20,42 @@ Dependency-free. Unified. Sealed for executable form.
 4. Enter a master passphrase (creates encrypted vault)
 5. Create your first soul and begin the epoch cycle
 
+## 🛡️ Security & Safety Warnings
+
+**This software is completely safe.** You may see security warnings because the binaries are not code-signed (which costs $$$ annually). Here's how to proceed:
+
+### Why Warnings Appear
+- Binaries are **unsigned** (not from Microsoft/Apple verified developer)
+- This is normal for open-source projects
+- **All source code is visible** in this repository — inspect it yourself!
+
+### How to Bypass Warnings
+
+**Windows:**
+- If Windows Defender blocks it: Click **"More info"** → **"Run anyway"**
+- If SmartScreen appears: **"More info"** → **"Run anyway"**
+- You can also right-click → **Properties** → check **"Unblock"** → Apply
+
+**macOS:**
+- Right-click the binary → **"Open"** (don't double-click)
+- Click **"Open"** in the security dialog
+- Or: System Settings → Privacy & Security → Allow app to run
+
+**Linux:**
+- Usually no warnings
+- If permission denied: `chmod +x oinio-system-linux`
+
+### Build It Yourself (Ultimate Safety)
+Don't trust binaries? Build from source:
+```bash
+npm install -g pkg
+git clone https://github.com/onenoly1010/oinio-soul-system
+cd oinio-soul-system
+pkg oinio-system.js --targets node18-linux-x64
+```
+
+**Your data stays local.** No network calls. No telemetry. Inspect the code!
+
 ## 📦 Binaries
 
 - `oinio-system-linux` — Linux x64
