@@ -7,10 +7,12 @@ Dependency-free. Unified. Sealed for executable form.
 ## ✨ Features
 
 - **Deterministic Oracle** — Same question + soul + epoch = same reading
+- **⚡ Quantum Enhancement** — Optional AI-powered harmony predictions via Pi Forge integration
 - **AES-256-GCM Encryption** — All souls protected by your passphrase
 - **Zero Dependencies** — Standalone binaries, no Node.js required
 - **Cross-Platform** — Windows, macOS, Linux
 - **Private & Local** — All data stays on your machine
+- **Dual-Mode Oracle** — Toggle between deterministic and quantum-enhanced readings
 
 ## 🚀 Quick Start
 
@@ -76,15 +78,37 @@ Each oracle reading generates:
 - **Pattern Recognition** (The Spiral, The Mirror, etc.)
 - **Oracle Message** (deterministic wisdom)
 
-The same question asked to the same soul at the same epoch will always yield the same reading — the pattern remembers itself.
+### ⚡ Quantum Enhancement (Optional)
+When Pi Forge Quantum Genesis is available, readings also include:
+- **Harmony Index** — AI-predicted system harmony (0-100%)
+- **Trend Analysis** — Improving/declining/stable with confidence scores
+- **Quantum Insights** — ML-generated contextual wisdom
+- **Forge Recommendations** — AI-powered actionable guidance
+
+**Deterministic mode:** Same question = same answer (always)  
+**Quantum mode:** Context-aware AI predictions layered on top  
+**The synthesis:** Pattern + Trajectory = Navigation
 
 ## 📜 Export Lineage
 
 Export your soul history to CSV: `lineage.csv`
 
+## ⚡ Quantum Forge Integration
+
+OINIO can optionally integrate with **Pi Forge Quantum Genesis** for AI-enhanced readings:
+
+1. Clone Pi Forge: `git clone https://github.com/onenoly1010/pi-forge-quantum-genesis`
+2. Set path: `export PI_FORGE_PATH="/path/to/pi-forge-quantum-genesis"`
+3. Press **[Q]** in soul menu to toggle quantum mode
+4. Readings automatically enhanced with harmony predictions
+
+Works standalone without Forge. Quantum layer is purely optional enhancement.
+
+See [OINIO-FORGE-INTEGRATION.md](OINIO-FORGE-INTEGRATION.md) for full details.
+
 ## 🛡️ Privacy
 
-This is a **personal oracle system**. All data remains local. No cloud sync, no tracking.
+This is a **personal oracle system**. All data remains local. No cloud sync, no tracking. Quantum mode only shares partial seed (8 chars) with local Forge process.
 
 ---
 
