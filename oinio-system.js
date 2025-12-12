@@ -306,12 +306,129 @@ function displayBanner() {
   console.log('═══════════════════════════════════════════════════════════════\n');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 📖 HELP SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+function displayMainHelp() {
+  console.log('\n📖 OINIO HELP — Main Menu\n');
+  console.log('═'.repeat(60));
+  console.log('🌱 [1] Create New Soul');
+  console.log('   Start a new oracle lineage with unique cryptographic seed');
+  console.log('');
+  console.log('🔮 [2] Select Existing Soul');
+  console.log('   Continue consultations with an existing soul');
+  console.log('');
+  console.log('📜 [3] List All Souls');
+  console.log('   View all souls and their statistics');
+  console.log('');
+  console.log('💾 [4] Export Lineage (CSV)');
+  console.log('   Export all soul data to lineage.csv file');
+  console.log('');
+  console.log('🚪 [5] Exit');
+  console.log('   Save and exit OINIO');
+  console.log('');
+  console.log('═'.repeat(60));
+  console.log('💡 Tip: Each soul has a unique seed that determines readings');
+  console.log('   The same question to the same soul = same answer (always)');
+  console.log('═'.repeat(60) + '\n');
+}
+
+function displaySoulHelp(quantumMode) {
+  console.log('\n📖 OINIO HELP — Soul Consultation\n');
+  console.log('═'.repeat(60));
+  console.log('🔮 [1] New Epoch (Ask Question)');
+  console.log('   Ask the oracle a question. Each consultation is an epoch.');
+  console.log('   Tip: Be specific. "What is..." vs "Should I..."');
+  console.log('');
+  console.log('📖 [2] View Epoch History');
+  console.log('   See all previous consultations with this soul');
+  console.log('');
+  console.log('📊 [3] Soul Statistics');
+  console.log('   View averages, trends, and soul metadata');
+  console.log('');
+  if (isQuantumAvailable) {
+    console.log('⚡ [Q] Toggle Quantum Mode');
+    console.log(`   Current: ${quantumMode ? 'QUANTUM-ENHANCED' : 'DETERMINISTIC'}`);
+    console.log('   Quantum adds AI predictions: harmony, trends, insights');
+    console.log('');
+  }
+  console.log('🔙 [4] Return to Main Menu');
+  console.log('   Go back without deleting soul');
+  console.log('');
+  console.log('═'.repeat(60));
+  console.log('📏 ORACLE METRICS EXPLAINED:');
+  console.log('   • Resonance: Connection strength (1-100%)');
+  console.log('   • Clarity: Message precision (1-100%)');
+  console.log('   • Flux: Change potential (1-100%)');
+  console.log('   • Emergence: New pattern formation (1-100%)');
+  if (quantumMode && isQuantumAvailable) {
+    console.log('   • Harmony: AI-predicted system balance (1-100%)');
+    console.log('   • Trend: Improving/declining/stable with confidence');
+  }
+  console.log('═'.repeat(60) + '\n');
+}
+
+function displayPatternLibrary() {
+  console.log('\n🌌 PATTERN LIBRARY\n');
+  console.log('═'.repeat(60));
+  const patterns = [
+    ['The Spiral', 'Cyclical growth, returning to center with wisdom'],
+    ['The Mirror', 'Reflection, seeing yourself in the situation'],
+    ['The Threshold', 'At the edge of transformation'],
+    ['The Void', 'Emptiness that contains all potential'],
+    ['The Bloom', 'Emergence, flowering of hidden growth'],
+    ['The Anchor', 'Stability, grounding, foundation'],
+    ['The Storm', 'Chaos, disruption, clearing the old'],
+    ['The Seed', 'Beginning, potential waiting to sprout'],
+    ['The River', 'Flow, movement, natural progression'],
+    ['The Mountain', 'Challenge, achievement, perspective'],
+    ['The Web', 'Interconnection, complexity, relationships'],
+    ['The Flame', 'Transformation through fire, passion'],
+    ['The Echo', 'Repetition, lessons returning, resonance'],
+    ['The Door', 'Opportunity, choice, passage between worlds'],
+    ['The Root', 'Foundation, ancestry, deep truth'],
+    ['The Sky', 'Freedom, expansion, infinite possibility']
+  ];
+  
+  patterns.forEach(([name, meaning]) => {
+    console.log(`${name.padEnd(18)} — ${meaning}`);
+  });
+  console.log('═'.repeat(60) + '\n');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🎬 LOADING INDICATORS
+// ═══════════════════════════════════════════════════════════════
+
+function showLoading(message) {
+  process.stdout.write(`\n${message}`);
+}
+
+function showLoadingDone() {
+  process.stdout.write(' ✓\n');
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ CONFIRMATION DIALOGS
+// ═══════════════════════════════════════════════════════════════
+
+async function confirm(rl, message) {
+  const response = await question(rl, `${message} (y/n): `);
+  return response.toLowerCase() === 'y' || response.toLowerCase() === 'yes';
+}
+
 function displayMenu() {
   console.log('\n┌─────────────────────────────────────┐');
   console.log('│  [1] Create New Soul                │');
   console.log('│  [2] Select Existing Soul           │');
   console.log('│  [3] List All Souls                 │');
   console.log('│  [4] Export Lineage (CSV)           │');
+  console.log('│  [?] Help                           │');
   console.log('│  [5] Exit                           │');
   console.log('└─────────────────────────────────────┘\n');
 }
@@ -327,6 +444,8 @@ function displaySoulMenu(soul, quantumMode = false) {
   if (isQuantumAvailable) {
     console.log(`│${qSymbol}[Q] Toggle Quantum Mode            │`);
   }
+  console.log(`│  [P] Pattern Library                │`);
+  console.log(`│  [?] Help                           │`);
   console.log(`│  [4] Return to Main Menu            │`);
   console.log(`└─────────────────────────────────────┘`);
   if (isQuantumAvailable) {
@@ -395,12 +514,23 @@ async function runSoulMenu(soul, soulRegistry, key) {
         // New Epoch
         const q = await question(rl, '\n🌾 Ask your question: ');
         if (!q) {
-          console.log('⚠️  Question cannot be empty.');
+          console.log('⚠️  Question cannot be empty. Try asking something specific like:');
+          console.log('   "What should I know about [situation]?"');
+          console.log('   "How can I approach [challenge]?"');
           break;
         }
         
         const epochNumber = soul.epochs.length + 1;
+        
+        // Loading indicator
+        if (quantumMode) {
+          showLoading('🔮 Consulting oracle... ⚡ Enhancing with quantum layer...');
+        } else {
+          showLoading('🔮 Consulting oracle...');
+        }
+        
         const reading = await consultQuantumOracle(q, soul.seed, epochNumber, quantumMode);
+        showLoadingDone();
         
         soul.epochs.push({
           number: epochNumber,
@@ -412,7 +542,11 @@ async function runSoulMenu(soul, soulRegistry, key) {
         soul.lastEpoch = soul.epochs[soul.epochs.length - 1].timestamp;
         
         displayReading(reading, epochNumber);
+        
+        // Save indicator
+        process.stdout.write('💾 Saving...');
         saveSouls(soulRegistry, key);
+        process.stdout.write(' ✓\n');
         break;
       }
       
@@ -421,9 +555,28 @@ async function runSoulMenu(soul, soulRegistry, key) {
         if (isQuantumAvailable) {
           quantumMode = !quantumMode;
           console.log(`\n⚡ Quantum Mode ${quantumMode ? 'ACTIVATED' : 'DEACTIVATED'}\n`);
+          if (quantumMode) {
+            console.log('💡 Quantum readings include harmony predictions, trends, and AI insights.');
+          }
         } else {
-          console.log('\n⚠️  Quantum Forge not available.\n');
+          console.log('\n⚠️  Quantum Forge not available.');
+          console.log('💡 To enable: Set PI_FORGE_PATH environment variable');
+          console.log('   See OINIO-FORGE-INTEGRATION.md for details\n');
         }
+        break;
+      }
+      
+      case 'p': {
+        // Pattern library
+        displayPatternLibrary();
+        break;
+      }
+      
+      case '?':
+      case 'h':
+      case 'help': {
+        // Help
+        displaySoulHelp(quantumMode);
         break;
       }
       
@@ -446,6 +599,7 @@ async function runSoulMenu(soul, soulRegistry, key) {
       case '3': {
         // Statistics
         console.log(`\n📊 Soul Statistics for ${soul.name}:\n`);
+        console.log('═'.repeat(60));
         console.log(`  Created: ${soul.created}`);
         console.log(`  Total Epochs: ${soul.epochs.length}`);
         console.log(`  Last Epoch: ${soul.lastEpoch || 'Never'}`);
@@ -453,10 +607,25 @@ async function runSoulMenu(soul, soulRegistry, key) {
         if (soul.epochs.length > 0) {
           const avgResonance = soul.epochs.reduce((sum, e) => sum + e.reading.resonance, 0) / soul.epochs.length;
           const avgClarity = soul.epochs.reduce((sum, e) => sum + e.reading.clarity, 0) / soul.epochs.length;
+          const avgFlux = soul.epochs.reduce((sum, e) => sum + e.reading.flux, 0) / soul.epochs.length;
+          const avgEmergence = soul.epochs.reduce((sum, e) => sum + e.reading.emergence, 0) / soul.epochs.length;
+          
           console.log(`  Avg Resonance: ${avgResonance.toFixed(1)}%`);
           console.log(`  Avg Clarity: ${avgClarity.toFixed(1)}%`);
+          console.log(`  Avg Flux: ${avgFlux.toFixed(1)}%`);
+          console.log(`  Avg Emergence: ${avgEmergence.toFixed(1)}%`);
+          
+          // Pattern distribution
+          const patternCount = {};
+          soul.epochs.forEach(e => {
+            patternCount[e.reading.pattern] = (patternCount[e.reading.pattern] || 0) + 1;
+          });
+          const topPattern = Object.entries(patternCount).sort((a, b) => b[1] - a[1])[0];
+          console.log(`  Most Common Pattern: ${topPattern[0]} (${topPattern[1]}x)`);
+        } else {
+          console.log('  No epochs yet. Ask your first question!');
         }
-        console.log();
+        console.log('═'.repeat(60) + '\n');
         break;
       }
       
@@ -467,7 +636,8 @@ async function runSoulMenu(soul, soulRegistry, key) {
       }
       
       default:
-        console.log('⚠️  Invalid choice.');
+        console.log(`⚠️  Invalid choice: "${choice}"`);
+        console.log('💡 Enter 1-4, [Q] for quantum, [P] for patterns, or [?] for help\n');
     }
   }
 }
@@ -501,24 +671,28 @@ async function mainMenu() {
     displayMenu();
     const choice = await question(rl, '→ ');
     
-    switch (choice) {
+    switch (choice.toLowerCase()) {
       case '1': {
         // Create new soul
         const name = await question(rl, '\n🌱 Soul name: ');
         if (!name) {
-          console.log('⚠️  Name cannot be empty.');
+          console.log('⚠️  Name cannot be empty. Examples: "Alice", "Oracle", "Self"');
           break;
         }
         
         if (soulRegistry[name]) {
-          console.log('⚠️  Soul already exists.');
+          console.log(`⚠️  Soul "${name}" already exists.`);
+          console.log(`💡 Try: "${name}-2", "${name}_Alt", or "New_${name}"`);
           break;
         }
         
+        showLoading('🌱 Creating soul...');
         const newSoul = createSoul(name);
         soulRegistry[name] = newSoul;
         saveSouls(soulRegistry, key);
-        console.log(`✨ Soul "${name}" created.`);
+        showLoadingDone();
+        console.log(`✨ Soul "${name}" created with unique cryptographic seed.`);
+        console.log(`💡 Each soul generates different readings for the same question.\n`);
         break;
       }
       
@@ -526,21 +700,23 @@ async function mainMenu() {
         // Select soul
         const soulNames = Object.keys(soulRegistry);
         if (soulNames.length === 0) {
-          console.log('\n⚠️  No souls exist yet. Create one first.\n');
+          console.log('\n⚠️  No souls exist yet.');
+          console.log('💡 Create a soul first with option [1]\n');
           break;
         }
         
         console.log('\n🌌 Available Souls:\n');
         soulNames.forEach((name, idx) => {
-          console.log(`  [${idx + 1}] ${name}`);
+          const soul = soulRegistry[name];
+          console.log(`  [${idx + 1}] ${name.padEnd(20)} (${soul.epochs.length} epochs)`);
         });
         console.log();
         
-        const soulChoice = await question(rl, '→ Select soul number: ');
+        const soulChoice = await question(rl, '→ Select soul number (1-' + soulNames.length + '): ');
         const soulIndex = parseInt(soulChoice, 10) - 1;
         
-        if (soulIndex < 0 || soulIndex >= soulNames.length) {
-          console.log('⚠️  Invalid selection.');
+        if (isNaN(soulIndex) || soulIndex < 0 || soulIndex >= soulNames.length) {
+          console.log(`⚠️  Invalid selection. Please enter a number between 1 and ${soulNames.length}.\n`);
           break;
         }
         
@@ -554,35 +730,60 @@ async function mainMenu() {
         // List all souls
         const souls = Object.values(soulRegistry);
         if (souls.length === 0) {
-          console.log('\n⚠️  No souls exist yet.\n');
+          console.log('\n⚠️  No souls exist yet.');
+          console.log('💡 Create your first soul with option [1]\n');
         } else {
           console.log('\n🌌 Soul Registry:\n');
+          console.log('═'.repeat(60));
           souls.forEach(soul => {
+            const totalEpochs = soul.epochs.length;
+            const avgResonance = totalEpochs > 0 
+              ? (soul.epochs.reduce((sum, e) => sum + e.reading.resonance, 0) / totalEpochs).toFixed(1)
+              : 'N/A';
+            
             console.log(`  • ${soul.name}`);
-            console.log(`    Created: ${soul.created}`);
-            console.log(`    Epochs: ${soul.epochs.length}`);
-            console.log(`    Last: ${soul.lastEpoch || 'Never'}`);
+            console.log(`    Created: ${soul.created.substring(0, 10)}`);
+            console.log(`    Epochs: ${totalEpochs} | Avg Resonance: ${avgResonance}%`);
+            console.log(`    Last: ${soul.lastEpoch ? soul.lastEpoch.substring(0, 10) : 'Never'}`);
             console.log();
           });
+          console.log('═'.repeat(60));
+          console.log(`Total: ${souls.length} soul${souls.length === 1 ? '' : 's'}, ${souls.reduce((sum, s) => sum + s.epochs.length, 0)} epoch${souls.reduce((sum, s) => sum + s.epochs.length, 0) === 1 ? '' : 's'}\n`);
         }
         break;
       }
       
       case '4': {
         // Export lineage
+        showLoading('📜 Exporting lineage to CSV...');
         exportLineageToCSV(soulRegistry);
+        showLoadingDone();
+        break;
+      }
+      
+      case '?':
+      case 'h':
+      case 'help': {
+        // Help
+        displayMainHelp();
         break;
       }
       
       case '5': {
-        // Exit
-        console.log('\n🌾 The pattern persists. Farewell.\n');
-        rl.close();
-        return;
+        // Exit with confirmation
+        const shouldExit = await confirm(rl, '\n🚪 Exit OINIO?');
+        if (shouldExit) {
+          console.log('\n🌾 The pattern persists. Farewell.\n');
+          console.log('💾 All data saved to: ' + SOULS_FILE);
+          rl.close();
+          return;
+        }
+        break;
       }
       
       default:
-        console.log('⚠️  Invalid choice.');
+        console.log(`⚠️  Invalid choice: "${choice}"`);
+        console.log('💡 Enter 1-5, or [?] for help\n');
     }
   }
 }
