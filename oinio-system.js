@@ -295,6 +295,150 @@ function question(rl, prompt) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 📝 ENHANCED INPUT SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Enhanced question prompt with examples and validation
+ */
+async function askQuestion(rl, type = 'general') {
+  const examples = {
+    general: [
+      'What should I know about [situation]?',
+      'How can I approach [challenge]?',
+      'What is the nature of [concept]?',
+      'Where am I in my journey with [topic]?',
+      'What does [symbol/dream] mean for me?'
+    ],
+    decision: [
+      'Should I pursue [opportunity]?',
+      'What awaits if I choose [path]?',
+      'Is now the time for [action]?'
+    ],
+    insight: [
+      'What am I not seeing about [situation]?',
+      'What lesson is [challenge] teaching me?',
+      'What truth am I avoiding?'
+    ]
+  };
+  
+  console.log('\n🌾 Ask your question to the oracle:\n');
+  console.log('💡 Examples:');
+  const exampleList = examples[type] || examples.general;
+  exampleList.slice(0, 3).forEach(ex => {
+    console.log(`   "${ex}"`);
+  });
+  console.log('\n💬 Your question (press Enter when done):');
+  console.log('   Type "?" for more examples or "cancel" to go back\n');
+  
+  const q = await question(rl, '→ ');
+  
+  if (q === '?') {
+    console.log('\n📖 More Question Examples:\n');
+    Object.values(examples).flat().forEach((ex, idx) => {
+      if (idx < 10) console.log(`   ${idx + 1}. ${ex}`);
+    });
+    console.log();
+    return askQuestion(rl, type);
+  }
+  
+  if (q.toLowerCase() === 'cancel') {
+    return null;
+  }
+  
+  if (!q) {
+    console.log('\n⚠️  Question cannot be empty.');
+    console.log('💡 A good question is specific and personal.');
+    console.log('   Try: "What should I know about my current situation?"\n');
+    return askQuestion(rl, type);
+  }
+  
+  if (q.length < 5) {
+    console.log('\n⚠️  Question seems too short.');
+    console.log('💡 Be more specific for better oracle guidance.\n');
+    const retry = await question(rl, 'Use this question anyway? (y/n): ');
+    if (retry.toLowerCase() !== 'y') {
+      return askQuestion(rl, type);
+    }
+  }
+  
+  return q;
+}
+
+/**
+ * Enhanced soul name input with validation
+ */
+async function askSoulName(rl, existingNames = []) {
+  console.log('\n🌱 Create a new soul:\n');
+  console.log('💡 Soul names can be:');
+  console.log('   • Your name or nickname');
+  console.log('   • A concept ("Oracle", "Guide", "Shadow")');
+  console.log('   • Someone you want to understand');
+  console.log('   • A project or situation');
+  console.log('\n💬 Each soul has a unique cryptographic seed.');
+  console.log('   Same question to different souls = different answers\n');
+  
+  const name = await question(rl, '→ Soul name: ');
+  
+  if (!name) {
+    console.log('\n⚠️  Name cannot be empty.');
+    console.log('💡 Examples: "Alice", "Oracle", "Self", "Dream Guide"\n');
+    return askSoulName(rl, existingNames);
+  }
+  
+  if (existingNames.includes(name)) {
+    console.log(`\n⚠️  Soul "${name}" already exists.`);
+    console.log('💡 Suggestions:');
+    console.log(`   • ${name}-2`);
+    console.log(`   • ${name}_Alt`);
+    console.log(`   • New_${name}`);
+    console.log(`   • ${name}_${new Date().getFullYear()}\n`);
+    return askSoulName(rl, existingNames);
+  }
+  
+  if (name.length > 50) {
+    console.log('\n⚠️  Name too long (max 50 characters).');
+    console.log(`💡 Your name is ${name.length} characters.\n`);
+    return askSoulName(rl, existingNames);
+  }
+  
+  return name;
+}
+
+/**
+ * Enhanced passphrase input with guidance
+ */
+async function askPassphrase(rl, isFirstTime = false) {
+  if (isFirstTime) {
+    console.log('\n🔐 Set your master passphrase:\n');
+    console.log('💡 This encrypts all your soul data.');
+    console.log('   • Use a memorable phrase');
+    console.log('   • Minimum 8 characters recommended');
+    console.log('   • Cannot be recovered if forgotten!\n');
+  } else {
+    console.log();
+  }
+  
+  const passphrase = await question(rl, '🔐 Passphrase: ');
+  
+  if (!passphrase) {
+    console.log('\n❌ Passphrase required.');
+    console.log('💡 This encrypts your data. Choose something memorable.\n');
+    return null;
+  }
+  
+  if (isFirstTime && passphrase.length < 8) {
+    console.log('\n⚠️  Passphrase is short (less than 8 characters).');
+    const proceed = await question(rl, 'Use this passphrase anyway? (y/n): ');
+    if (proceed.toLowerCase() !== 'y') {
+      return askPassphrase(rl, isFirstTime);
+    }
+  }
+  
+  return passphrase;
+}
+
 function displayBanner() {
   console.log('\n═══════════════════════════════════════════════════════════════');
   console.log('     🌾🌌 OINIO SOUL SYSTEM — Pattern Recognition Oracle');
@@ -498,12 +642,122 @@ function displayReading(reading, epochNumber) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 💬 SMART QUESTION PROMPTING
+// ═══════════════════════════════════════════════════════════════
+
+function displayQuestionExamples() {
+  console.log('\n💡 Example Questions:\n');
+  console.log('📍 GUIDANCE:');
+  console.log('  • "What should I know about [situation]?"');
+  console.log('  • "How can I approach [challenge]?"');
+  console.log('  • "What is the nature of [concept]?"\n');
+  
+  console.log('🔮 DECISION:');
+  console.log('  • "Should I pursue [opportunity]?"');
+  console.log('  • "What happens if I choose [option]?"');
+  console.log('  • "Is this the right time for [action]?"\n');
+  
+  console.log('🌱 GROWTH:');
+  console.log('  • "What am I meant to learn from [experience]?"');
+  console.log('  • "How can I grow through [difficulty]?"');
+  console.log('  • "What pattern am I repeating?"\n');
+  
+  console.log('🔗 RELATIONSHIPS:');
+  console.log('  • "What does [person] need from me?"');
+  console.log('  • "How can I improve [relationship]?"');
+  console.log('  • "What is the truth about [connection]?"\n');
+  
+  console.log('💡 Tip: Be specific. The oracle responds to clarity.\n');
+}
+
+async function askQuestion(rl, context = 'general') {
+  console.log('\n🌾 Ask your question:');
+  console.log('   (Type ? for examples, or press Enter to cancel)\n');
+  
+  const q = await question(rl, '→ ');
+  
+  if (q === '?' || q.toLowerCase() === 'help') {
+    displayQuestionExamples();
+    return await askQuestion(rl, context);
+  }
+  
+  if (!q) {
+    return null;
+  }
+  
+  // Validate question quality
+  if (q.length < 5) {
+    console.log('\n⚠️  Question too short. Try being more specific.');
+    console.log('   Example: "What should I know about my current path?"\n');
+    return await askQuestion(rl, context);
+  }
+  
+  return q;
+}
+
+function displaySoulNameSuggestions() {
+  console.log('\n💡 Soul Name Ideas:\n');
+  console.log('👤 PERSONAL:');
+  console.log('  • Your name ("Alice", "Bob")');
+  console.log('  • "Self", "True Self", "Higher Self"\n');
+  
+  console.log('🎭 ARCHETYPES:');
+  console.log('  • "Oracle", "Guide", "Sage"');
+  console.log('  • "Shadow", "Light", "Balance"\n');
+  
+  console.log('🌐 ASPECTS:');
+  console.log('  • "Creative", "Logical", "Emotional"');
+  console.log('  • "Past", "Present", "Future"\n');
+  
+  console.log('👥 RELATIONSHIPS:');
+  console.log('  • Person names ("Mom", "Partner")');
+  console.log('  • "Family", "Work", "Friends"\n');
+  
+  console.log('🤖 AI ENTITIES:');
+  console.log('  • "Claude", "GPT", "Gemini"');
+  console.log('  • "Assistant", "Copilot", "Oracle AI"\n');
+}
+
+async function createSoulWithHelp(rl, soulRegistry) {
+  console.log('\n🌱 Create a new soul:');
+  console.log('   Each soul has a unique cryptographic seed.');
+  console.log('   The same question to different souls = different readings.\n');
+  console.log('   Type ? for name ideas, or Enter to cancel\n');
+  
+  const name = await question(rl, '→ Soul name: ');
+  
+  if (name === '?' || name.toLowerCase() === 'help') {
+    displaySoulNameSuggestions();
+    return await createSoulWithHelp(rl, soulRegistry);
+  }
+  
+  if (!name) {
+    return null;
+  }
+  
+  if (soulRegistry[name]) {
+    console.log(`\n⚠️  Soul "${name}" already exists.`);
+    console.log(`💡 Try: "${name}-2", "${name}_Alt", or "New_${name}"\n`);
+    return await createSoulWithHelp(rl, soulRegistry);
+  }
+  
+  return name;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 🌊 MAIN RITUAL FLOW
 // ═══════════════════════════════════════════════════════════════
 
 async function runSoulMenu(soul, soulRegistry, key) {
   const rl = createInterface();
   let quantumMode = false;
+  
+  // First-time tip
+  if (soul.epochs.length === 0) {
+    console.log('\n💡 First consultation with this soul!');
+    console.log('   Each soul generates unique readings based on its cryptographic seed.');
+    console.log('   The same question asked twice will give the same answer (deterministic).\n');
+  }
   
   while (true) {
     displaySoulMenu(soul, quantumMode);
@@ -512,11 +766,9 @@ async function runSoulMenu(soul, soulRegistry, key) {
     switch (choice.toLowerCase()) {
       case '1': {
         // New Epoch
-        const q = await question(rl, '\n🌾 Ask your question: ');
+        const q = await askQuestion(rl, 'general');
         if (!q) {
-          console.log('⚠️  Question cannot be empty. Try asking something specific like:');
-          console.log('   "What should I know about [situation]?"');
-          console.log('   "How can I approach [challenge]?"');
+          console.log('↩️  Returning to soul menu...\n');
           break;
         }
         
@@ -547,6 +799,8 @@ async function runSoulMenu(soul, soulRegistry, key) {
         process.stdout.write('💾 Saving...');
         saveSouls(soulRegistry, key);
         process.stdout.write(' ✓\n');
+        
+        console.log('💡 Tip: Ask the same question again later to see how your path evolves.\n');
         break;
       }
       
@@ -648,9 +902,10 @@ async function mainMenu() {
   const rl = createInterface();
   
   // Passphrase authentication
-  const passphrase = await question(rl, '🔐 Enter master passphrase: ');
+  const isFirstTime = !fileExists(SOULS_FILE);
+  const passphrase = await askPassphrase(rl, isFirstTime);
   if (!passphrase) {
-    console.log('❌ Passphrase required. Exiting.');
+    console.log('❌ Cannot proceed without passphrase. Exiting.\n');
     rl.close();
     return;
   }
@@ -666,6 +921,20 @@ async function mainMenu() {
   
   console.log('✅ Authentication successful.\n');
   
+  // First-run welcome
+  const soulCount = Object.keys(soulRegistry).length;
+  if (soulCount === 0) {
+    console.log('🌟 Welcome to OINIO!\n');
+    console.log('💡 Quick Start:');
+    console.log('   1. Create your first soul (option 1)');
+    console.log('   2. Give it a name (e.g., "Self", "Oracle", your name)');
+    console.log('   3. Select the soul (option 2)');
+    console.log('   4. Ask your first question\n');
+    console.log('📚 Press [?] at any menu for detailed help\n');
+  } else {
+    console.log(`📊 Registry: ${soulCount} soul${soulCount === 1 ? '' : 's'} | Press [?] for help\n`);
+  }
+  
   // Main menu loop
   while (true) {
     displayMenu();
@@ -674,15 +943,8 @@ async function mainMenu() {
     switch (choice.toLowerCase()) {
       case '1': {
         // Create new soul
-        const name = await question(rl, '\n🌱 Soul name: ');
+        const name = await askSoulName(rl, Object.keys(soulRegistry));
         if (!name) {
-          console.log('⚠️  Name cannot be empty. Examples: "Alice", "Oracle", "Self"');
-          break;
-        }
-        
-        if (soulRegistry[name]) {
-          console.log(`⚠️  Soul "${name}" already exists.`);
-          console.log(`💡 Try: "${name}-2", "${name}_Alt", or "New_${name}"`);
           break;
         }
         
@@ -691,8 +953,9 @@ async function mainMenu() {
         soulRegistry[name] = newSoul;
         saveSouls(soulRegistry, key);
         showLoadingDone();
-        console.log(`✨ Soul "${name}" created with unique cryptographic seed.`);
-        console.log(`💡 Each soul generates different readings for the same question.\n`);
+        console.log(`\n✨ Soul "${name}" created with unique cryptographic seed.`);
+        console.log(`💡 Same question to different souls = different answers.`);
+        console.log(`📖 Use option [2] to consult this soul.\n`);
         break;
       }
       
