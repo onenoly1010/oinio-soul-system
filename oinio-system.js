@@ -768,10 +768,18 @@ function displayMainHelp() {
   console.log('💾 [4] Export Lineage (CSV)');
   console.log('   Export all soul data to lineage.csv file');
   console.log('');
+  console.log('🔄 [L] Logout (Switch User)');
+  console.log('   Logout and switch to a different user account');
+  console.log('');
   console.log('🚪 [5] Exit');
   console.log('   Save and exit OINIO');
   console.log('');
   console.log('═'.repeat(60));
+  console.log('🔐 USER SYSTEM:');
+  console.log('   • Each user has their own encrypted soul registry');
+  console.log('   • Your souls are private and isolated from other users');
+  console.log('   • All data is encrypted with your password');
+  console.log('');
   console.log('💡 Tip: Each soul has a unique seed that determines readings');
   console.log('   The same question to the same soul = same answer (always)');
   console.log('═'.repeat(60) + '\n');
@@ -872,6 +880,7 @@ function displayMenu() {
   console.log('│  [3] List All Souls                 │');
   console.log('│  [4] Export Lineage (CSV)           │');
   console.log('│  [?] Help                           │');
+  console.log('│  [L] Logout (Switch User)           │');
   console.log('│  [5] Exit                           │');
   console.log('└─────────────────────────────────────┘\n');
 }
@@ -1334,6 +1343,18 @@ async function mainMenu() {
         break;
       }
       
+      case 'l':
+      case 'logout': {
+        // Logout and return to login screen
+        const shouldLogout = await confirm(rl, '\n🔄 Logout and switch user?');
+        if (shouldLogout) {
+          console.log('\n👋 Logging out...\n');
+          rl.close();
+          return mainMenu(); // Restart with login screen
+        }
+        break;
+      }
+      
       case '5': {
         // Exit with confirmation
         const shouldExit = await confirm(rl, '\n🚪 Exit OINIO?');
@@ -1348,7 +1369,7 @@ async function mainMenu() {
       
       default:
         console.log(`⚠️  Invalid choice: "${choice}"`);
-        console.log('💡 Enter 1-5, or [?] for help\n');
+        console.log('💡 Enter 1-5, [L] for logout, or [?] for help\n');
     }
   }
 }
