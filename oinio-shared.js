@@ -86,7 +86,7 @@ function generateDeterministicReading(question, seed, epochNumber) {
  * Displays oracle reading with visual formatting
  */
 function displayReading(reading, epochNumber) {
-  const modeLabel = reading.mode === 'quantum-enhanced' ? 'QUANTUM-ENHANCED' : 'DETERMINISTIC';
+  const modeLabel = reading.mode.toUpperCase();
   
   console.log('\n╔═══════════════════════════════════════════════════════════════╗');
   console.log(`║  🔮 EPOCH ${epochNumber} READING [${modeLabel}]`);
