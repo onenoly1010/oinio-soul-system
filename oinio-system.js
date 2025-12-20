@@ -115,20 +115,40 @@ function hashPassword(password) {
 }
 
 /**
+ * Derives an encryption key from password and salt using PBKDF2
+ * This is used for encrypting/decrypting soul data
+ * Returns: 32-byte Buffer suitable for AES-256
+ */
+function deriveEncryptionKey(password, salt) {
+  // Use PBKDF2 with high iteration count for better security
+  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
+}
+
+/**
  * Verifies a password against stored salt and hash
+ * Uses constant-time comparison to prevent timing attacks
  */
 function verifyPassword(password, salt, hash) {
-  const computedHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-  return computedHash === hash;
+  const computedHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
+  const storedHash = Buffer.from(hash, 'hex');
+  
+  // Use timingSafeEqual for constant-time comparison
+  if (computedHash.length !== storedHash.length) {
+    return false;
+  }
+  
+  return crypto.timingSafeEqual(computedHash, storedHash);
 }
 
 /**
  * Master key for encrypting users database (derived from fixed system identifier)
  * This is separate from user soul encryption keys
+ * Note: All installations share this key. Users.enc is primarily for preventing
+ * casual access, not for protecting against determined attackers with source code access.
  */
 function getUsersDbKey() {
   // Use a fixed identifier for the users database encryption
-  // In production, this could be hardware-specific or configurable
+  // The real security comes from per-user password-based encryption of soul data
   return deriveKey('oinio-users-db-v1');
 }
 
@@ -166,6 +186,23 @@ function loadUsers() {
   
   try {
     const bundle = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    
+    // Validate bundle structure
+    if (!bundle || typeof bundle !== 'object') {
+      console.error('❌ Invalid users database format: not an object');
+      return null;
+    }
+    
+    if (!bundle.iv || !bundle.authTag || !bundle.data) {
+      console.error('❌ Invalid users database format: missing required fields');
+      return null;
+    }
+    
+    if (typeof bundle.iv !== 'string' || typeof bundle.authTag !== 'string' || typeof bundle.data !== 'string') {
+      console.error('❌ Invalid users database format: fields must be strings');
+      return null;
+    }
+    
     const key = getUsersDbKey();
     const iv = Buffer.from(bundle.iv, 'hex');
     const authTag = Buffer.from(bundle.authTag, 'hex');
@@ -198,9 +235,15 @@ function registerUser(username, password) {
   }
   
   const { salt, hash } = hashPassword(password);
+  
+  // Generate a separate salt for encrypting soul data
+  // This salt is used with the password to derive the encryption key
+  const encryptionSalt = crypto.randomBytes(32).toString('hex');
+  
   usersDb[username] = {
-    salt,
-    hash,
+    salt,           // For password verification
+    hash,           // Password hash
+    encryptionSalt, // For deriving soul data encryption key
     created: new Date().toISOString()
   };
   
@@ -212,7 +255,7 @@ function registerUser(username, password) {
 }
 
 /**
- * Authenticates a user
+ * Authenticates a user and returns encryption salt if successful
  */
 function authenticateUser(username, password) {
   const usersDb = loadUsers();
@@ -226,7 +269,8 @@ function authenticateUser(username, password) {
   }
   
   if (verifyPassword(password, user.salt, user.hash)) {
-    return { success: true };
+    // Return encryption salt for deriving soul data encryption key
+    return { success: true, encryptionSalt: user.encryptionSalt };
   } else {
     return { success: false, error: 'Invalid username or password' };
   }
@@ -281,6 +325,23 @@ function loadSouls(key, username = null) {
   
   try {
     const bundle = JSON.parse(fs.readFileSync(soulsFile, 'utf8'));
+    
+    // Validate bundle structure
+    if (!bundle || typeof bundle !== 'object') {
+      console.error('❌ Invalid soul data format: not an object');
+      return null;
+    }
+    
+    if (!bundle.iv || !bundle.authTag || !bundle.data) {
+      console.error('❌ Invalid soul data format: missing required fields');
+      return null;
+    }
+    
+    if (typeof bundle.iv !== 'string' || typeof bundle.authTag !== 'string' || typeof bundle.data !== 'string') {
+      console.error('❌ Invalid soul data format: fields must be strings');
+      return null;
+    }
+    
     const iv = Buffer.from(bundle.iv, 'hex');
     const authTag = Buffer.from(bundle.authTag, 'hex');
     const encrypted = Buffer.from(bundle.data, 'hex');
@@ -682,7 +743,7 @@ async function loginScreen() {
       if (result.success) {
         console.log('\n✅ Login successful!\n');
         rl.close();
-        return { username, password };
+        return { username, password, encryptionSalt: result.encryptionSalt };
       } else {
         console.log(`\n❌ ${result.error}\n`);
         const retry = await question(rl, 'Try again? (y/n): ');
@@ -1214,13 +1275,13 @@ async function mainMenu() {
     return;
   }
   
-  const { username, password } = userCreds;
+  const { username, password, encryptionSalt } = userCreds;
   
   const rl = createInterface();
   
-  // Use password as passphrase for encrypting soul data
-  // Each user's souls are encrypted with their password
-  const key = deriveKey(password);
+  // Use PBKDF2 with encryption salt for deriving encryption key
+  // This provides better security than simple SHA-256 hashing
+  const key = deriveEncryptionKey(password, encryptionSalt);
   let soulRegistry = loadSouls(key, username);
   
   if (soulRegistry === null) {
