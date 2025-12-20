@@ -6,9 +6,12 @@ Dependency-free. Unified. Sealed for executable form.
 
 ## ✨ Features
 
+- **Multi-User Support** — Separate accounts with individual encrypted soul registries
+- **Secure Authentication** — PBKDF2 password hashing (100,000 iterations, SHA-512)
 - **Deterministic Oracle** — Same question + soul + epoch = same reading
 - **⚡ Quantum Enhancement** — Optional AI-powered harmony predictions via Pi Forge integration
-- **AES-256-GCM Encryption** — All souls protected by your passphrase
+- **AES-256-GCM Encryption** — All souls protected by your password
+- **Data Isolation** — Each user's souls are completely separate and private
 - **Zero Dependencies** — Standalone binaries, no Node.js required
 - **Cross-Platform** — Windows, macOS, Linux
 - **Private & Local** — All data stays on your machine
@@ -19,8 +22,27 @@ Dependency-free. Unified. Sealed for executable form.
 1. Download the binary for your OS from [Releases](../../releases)
 2. Make it executable (Linux/macOS): `chmod +x oinio-system-*`
 3. Run: `./oinio-system-linux` (or your platform's binary)
-4. Enter a master passphrase (creates encrypted vault)
+4. **Create an account** or login with your username and password
 5. Create your first soul and begin the epoch cycle
+
+## 👤 User System
+
+### Account Creation
+- Choose a unique username (3-20 characters, alphanumeric, underscore, hyphen)
+- Create a secure password (minimum 8 characters)
+- Your password encrypts all your soul data
+
+### Login & Security
+- Login with your username and password
+- Each user has their own encrypted soul registry (`souls_username.enc`)
+- Passwords are hashed with PBKDF2 (100,000 iterations)
+- User credentials stored in encrypted `users.enc` file
+- **Cannot recover forgotten passwords** — choose wisely!
+
+### Switching Users
+- Press `[L]` in the main menu to logout
+- You can create multiple accounts on the same machine
+- Each user's data is completely isolated
 
 ## 🛡️ Security & Safety Warnings
 
@@ -66,10 +88,22 @@ pkg oinio-system.js --targets node18-linux-x64
 
 ## 🔐 Security
 
-- Master passphrase derives encryption key (SHA-256)
-- All soul data encrypted in `souls.enc`
+### User Authentication
+- Passwords hashed with PBKDF2 (100,000 iterations, SHA-512, 32-byte salt)
+- User credentials encrypted in `users.enc` with AES-256-GCM
+- Password verification uses constant-time comparison
+
+### Data Encryption
+- Each user's soul data encrypted separately (`souls_username.enc`)
+- User password derives AES-256 encryption key (SHA-256)
+- All data encrypted with AES-256-GCM (authenticated encryption)
+- Unique IV (Initialization Vector) per encryption operation
+
+### Privacy
 - No network calls, no telemetry
+- All data stored locally on your machine
 - Deterministic readings from cryptographic hashing
+- Complete data isolation between users
 
 ## 🌊 The Pattern
 
@@ -108,7 +142,22 @@ See [OINIO-FORGE-INTEGRATION.md](OINIO-FORGE-INTEGRATION.md) for full details.
 
 ## 🛡️ Privacy
 
-This is a **personal oracle system**. All data remains local. No cloud sync, no tracking. Quantum mode only shares partial seed (8 chars) with local Forge process.
+This is a **personal oracle system** with **multi-user support**. All data remains local. No cloud sync, no tracking, no network calls.
+
+### Data Storage
+- User accounts: `users.enc` (encrypted credentials)
+- Soul data: `souls_username.enc` (per-user encrypted registries)
+- All files stored in the same directory as the executable
+
+### What's Shared
+- Nothing! All processing is local
+- Quantum mode only shares partial seed (8 chars) with local Forge process
+- No telemetry, no analytics, no external servers
+
+### User Isolation
+- Each user has completely separate soul registries
+- Users cannot access each other's souls or data
+- Even with access to encrypted files, data requires the user's password
 
 ---
 

@@ -15,11 +15,43 @@ const path = require('path');
 const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
+// 🚀 PERFORMANCE OPTIMIZATIONS
+// ═══════════════════════════════════════════════════════════════
+
+// Cache for static pattern and message arrays (avoid recreating on each consultation)
+const PATTERNS = Object.freeze([
+  'The Spiral', 'The Mirror', 'The Threshold', 'The Void',
+  'The Bloom', 'The Anchor', 'The Storm', 'The Seed',
+  'The River', 'The Mountain', 'The Web', 'The Flame',
+  'The Echo', 'The Door', 'The Root', 'The Sky'
+]);
+
+const MESSAGES = Object.freeze([
+  'What once was hidden now seeks form.',
+  'The pattern remembers itself through you.',
+  'Resistance is the shape of the next becoming.',
+  'You are the question and the answer.',
+  'What you seek is seeking you.',
+  'The chaos contains the blueprint.',
+  'This moment is the initiation.',
+  'You are already what you are becoming.',
+  'The wound is where the light enters.',
+  'Trust the spiral, not the straight line.',
+  'What falls away was never yours.',
+  'The void is full of potential.',
+  'You are the bridge between worlds.',
+  'The fear is the threshold.',
+  'What you birth will birth you.',
+  'The ending is also the beginning.'
+]);
+
+// ═══════════════════════════════════════════════════════════════
 // 🌌 QUANTUM FORGE INTEGRATION
 // ═══════════════════════════════════════════════════════════════
 
 /**
  * Calls Pi Forge Quantum AI Enhancer for harmony predictions
+ * Optimized with reduced timeout (3s instead of 5s)
  */
 async function invokeQuantumForge(question, contextData) {
   return new Promise((resolve, reject) => {
@@ -30,7 +62,7 @@ async function invokeQuantumForge(question, contextData) {
     // Check if forge is available
     const fs = require('fs');
     if (!fs.existsSync(pythonScript)) {
-      console.log('⚠️  Quantum Forge not found, using standard oracle mode');
+      // Silent fallback - warning logged at bridge initialization
       resolve(null);
       return;
     }
@@ -60,7 +92,7 @@ async function invokeQuantumForge(question, contextData) {
     
     python.on('close', (code) => {
       if (code !== 0) {
-        console.log('⚠️  Quantum Forge unavailable, falling back to deterministic mode');
+        // Silent fallback - reduces console noise for normal operation
         resolve(null);
         return;
       }
@@ -73,16 +105,17 @@ async function invokeQuantumForge(question, contextData) {
       }
     });
     
-    // Timeout after 5 seconds
+    // Reduced timeout from 5s to 3s for better performance
     setTimeout(() => {
       python.kill();
       resolve(null);
-    }, 5000);
+    }, 3000);
   });
 }
 
 /**
  * Enhanced oracle consultation with quantum forge integration
+ * Optimized to use cached pattern/message arrays
  */
 async function consultQuantumOracle(question, seed, epochNumber) {
   // Phase 1: Deterministic cryptographic reading (OINIO)
