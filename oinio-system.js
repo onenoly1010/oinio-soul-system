@@ -51,7 +51,16 @@ const getBasePath = () => {
 
 const BASE_PATH = getBasePath();
 const LINEAGE_FILE = path.join(BASE_PATH, 'lineage.csv');
-const SOULS_FILE = path.join(BASE_PATH, 'souls.enc');
+const USERS_FILE = path.join(BASE_PATH, 'users.enc');
+
+// Soul file path will be determined per-user
+function getSoulsFilePath(username) {
+  if (!username) {
+    // Backward compatibility: if no username, use default file
+    return path.join(BASE_PATH, 'souls.enc');
+  }
+  return path.join(BASE_PATH, `souls_${username}.enc`);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // 🔐 CRYPTOGRAPHIC PRIMITIVES
@@ -92,6 +101,138 @@ function decrypt(iv, authTag, encrypted, key) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 👤 USER AUTHENTICATION SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Hashes a password using PBKDF2 (built-in, no dependencies)
+ * Returns: {salt, hash} where both are hex strings
+ */
+function hashPassword(password) {
+  const salt = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return { salt, hash };
+}
+
+/**
+ * Verifies a password against stored salt and hash
+ */
+function verifyPassword(password, salt, hash) {
+  const computedHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return computedHash === hash;
+}
+
+/**
+ * Master key for encrypting users database (derived from fixed system identifier)
+ * This is separate from user soul encryption keys
+ */
+function getUsersDbKey() {
+  // Use a fixed identifier for the users database encryption
+  // In production, this could be hardware-specific or configurable
+  return deriveKey('oinio-users-db-v1');
+}
+
+/**
+ * Saves users database to encrypted file
+ * Format: { username: { salt: string, hash: string, created: ISO date } }
+ */
+function saveUsers(usersDb) {
+  try {
+    const payload = JSON.stringify(usersDb);
+    const key = getUsersDbKey();
+    const { iv, authTag, encrypted } = encrypt(payload, key);
+    
+    const bundle = JSON.stringify({
+      iv: iv.toString('hex'),
+      authTag: authTag.toString('hex'),
+      data: encrypted.toString('hex')
+    });
+    
+    fs.writeFileSync(USERS_FILE, bundle, 'utf8');
+    return true;
+  } catch (err) {
+    console.error('⚠️  Failed to save users database:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Loads users database from encrypted file
+ */
+function loadUsers() {
+  if (!fileExists(USERS_FILE)) {
+    return {};
+  }
+  
+  try {
+    const bundle = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    const key = getUsersDbKey();
+    const iv = Buffer.from(bundle.iv, 'hex');
+    const authTag = Buffer.from(bundle.authTag, 'hex');
+    const encrypted = Buffer.from(bundle.data, 'hex');
+    
+    const plaintext = decrypt(iv, authTag, encrypted, key);
+    if (!plaintext) {
+      console.error('❌ Failed to decrypt users database.');
+      return null;
+    }
+    
+    return JSON.parse(plaintext);
+  } catch (err) {
+    console.error('⚠️  Failed to load users database:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Registers a new user
+ */
+function registerUser(username, password) {
+  const usersDb = loadUsers();
+  if (usersDb === null) {
+    return { success: false, error: 'Failed to load users database' };
+  }
+  
+  if (usersDb[username]) {
+    return { success: false, error: 'Username already exists' };
+  }
+  
+  const { salt, hash } = hashPassword(password);
+  usersDb[username] = {
+    salt,
+    hash,
+    created: new Date().toISOString()
+  };
+  
+  if (saveUsers(usersDb)) {
+    return { success: true };
+  } else {
+    return { success: false, error: 'Failed to save user' };
+  }
+}
+
+/**
+ * Authenticates a user
+ */
+function authenticateUser(username, password) {
+  const usersDb = loadUsers();
+  if (usersDb === null) {
+    return { success: false, error: 'Failed to load users database' };
+  }
+  
+  const user = usersDb[username];
+  if (!user) {
+    return { success: false, error: 'Invalid username or password' };
+  }
+  
+  if (verifyPassword(password, user.salt, user.hash)) {
+    return { success: true };
+  } else {
+    return { success: false, error: 'Invalid username or password' };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 💾 PERSISTENCE LAYER (PKG-COMPATIBLE)
 // ═══════════════════════════════════════════════════════════════
 
@@ -109,8 +250,9 @@ function fileExists(filepath) {
 /**
  * Saves encrypted soul data to disk
  */
-function saveSouls(soulRegistry, key) {
+function saveSouls(soulRegistry, key, username = null) {
   try {
+    const soulsFile = getSoulsFilePath(username);
     const payload = JSON.stringify(soulRegistry);
     const { iv, authTag, encrypted } = encrypt(payload, key);
     
@@ -120,7 +262,7 @@ function saveSouls(soulRegistry, key) {
       data: encrypted.toString('hex')
     });
     
-    fs.writeFileSync(SOULS_FILE, bundle, 'utf8');
+    fs.writeFileSync(soulsFile, bundle, 'utf8');
     return true;
   } catch (err) {
     console.error('⚠️  Failed to save souls:', err.message);
@@ -131,13 +273,14 @@ function saveSouls(soulRegistry, key) {
 /**
  * Loads encrypted soul data from disk
  */
-function loadSouls(key) {
-  if (!fileExists(SOULS_FILE)) {
+function loadSouls(key, username = null) {
+  const soulsFile = getSoulsFilePath(username);
+  if (!fileExists(soulsFile)) {
     return {};
   }
   
   try {
-    const bundle = JSON.parse(fs.readFileSync(SOULS_FILE, 'utf8'));
+    const bundle = JSON.parse(fs.readFileSync(soulsFile, 'utf8'));
     const iv = Buffer.from(bundle.iv, 'hex');
     const authTag = Buffer.from(bundle.authTag, 'hex');
     const encrypted = Buffer.from(bundle.data, 'hex');
@@ -437,6 +580,162 @@ async function askPassphrase(rl, isFirstTime = false) {
   }
   
   return passphrase;
+}
+
+/**
+ * User login/registration UI
+ */
+async function askUsername(rl) {
+  console.log('\n👤 Enter your username:');
+  console.log('   (3-20 characters, letters, numbers, underscore, hyphen)\n');
+  
+  const username = await question(rl, '→ Username: ');
+  
+  if (!username) {
+    console.log('\n❌ Username required.\n');
+    return null;
+  }
+  
+  // Validate username format
+  if (username.length < 3 || username.length > 20) {
+    console.log('\n⚠️  Username must be 3-20 characters.\n');
+    return askUsername(rl);
+  }
+  
+  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+    console.log('\n⚠️  Username can only contain letters, numbers, underscore, and hyphen.\n');
+    return askUsername(rl);
+  }
+  
+  return username;
+}
+
+/**
+ * User password input with confirmation for registration
+ */
+async function askUserPassword(rl, isRegistration = false) {
+  if (isRegistration) {
+    console.log('\n🔐 Create your password:\n');
+    console.log('💡 Password requirements:');
+    console.log('   • Minimum 8 characters');
+    console.log('   • Cannot be recovered if forgotten!\n');
+  } else {
+    console.log();
+  }
+  
+  const password = await question(rl, '🔐 Password: ');
+  
+  if (!password) {
+    console.log('\n❌ Password required.\n');
+    return null;
+  }
+  
+  if (password.length < 8) {
+    console.log('\n⚠️  Password must be at least 8 characters.\n');
+    return askUserPassword(rl, isRegistration);
+  }
+  
+  // If registration, ask for confirmation
+  if (isRegistration) {
+    const confirm = await question(rl, '🔐 Confirm password: ');
+    if (confirm !== password) {
+      console.log('\n❌ Passwords do not match. Try again.\n');
+      return askUserPassword(rl, isRegistration);
+    }
+  }
+  
+  return password;
+}
+
+/**
+ * Login/Registration screen
+ */
+async function loginScreen() {
+  const rl = createInterface();
+  
+  console.log('\n┌─────────────────────────────────────┐');
+  console.log('│  Welcome to OINIO Soul System       │');
+  console.log('├─────────────────────────────────────┤');
+  console.log('│  [1] Login                          │');
+  console.log('│  [2] Create New Account             │');
+  console.log('│  [3] Exit                           │');
+  console.log('└─────────────────────────────────────┘\n');
+  
+  const choice = await question(rl, '→ ');
+  
+  switch (choice) {
+    case '1': {
+      // Login
+      const username = await askUsername(rl);
+      if (!username) {
+        rl.close();
+        return await loginScreen();
+      }
+      
+      const password = await askUserPassword(rl, false);
+      if (!password) {
+        rl.close();
+        return await loginScreen();
+      }
+      
+      const result = authenticateUser(username, password);
+      if (result.success) {
+        console.log('\n✅ Login successful!\n');
+        rl.close();
+        return { username, password };
+      } else {
+        console.log(`\n❌ ${result.error}\n`);
+        const retry = await question(rl, 'Try again? (y/n): ');
+        rl.close();
+        if (retry.toLowerCase() === 'y') {
+          return await loginScreen();
+        }
+        return null;
+      }
+    }
+    
+    case '2': {
+      // Registration
+      console.log('\n🌟 Create a new OINIO account\n');
+      
+      const username = await askUsername(rl);
+      if (!username) {
+        rl.close();
+        return await loginScreen();
+      }
+      
+      const password = await askUserPassword(rl, true);
+      if (!password) {
+        rl.close();
+        return await loginScreen();
+      }
+      
+      const result = registerUser(username, password);
+      if (result.success) {
+        console.log('\n✅ Account created successfully!\n');
+        console.log('💡 Your username:', username);
+        console.log('💡 You can now login with your credentials.\n');
+        rl.close();
+        return await loginScreen();
+      } else {
+        console.log(`\n❌ ${result.error}\n`);
+        rl.close();
+        return await loginScreen();
+      }
+    }
+    
+    case '3': {
+      // Exit
+      console.log('\n👋 Goodbye!\n');
+      rl.close();
+      return null;
+    }
+    
+    default:
+      console.log('\n⚠️  Invalid choice. Please select 1, 2, or 3.\n');
+      rl.close();
+      return await loginScreen();
+  }
 }
 
 function displayBanner() {
@@ -748,7 +1047,7 @@ async function createSoulWithHelp(rl, soulRegistry) {
 // 🌊 MAIN RITUAL FLOW
 // ═══════════════════════════════════════════════════════════════
 
-async function runSoulMenu(soul, soulRegistry, key) {
+async function runSoulMenu(soul, soulRegistry, key, username) {
   const rl = createInterface();
   let quantumMode = false;
   
@@ -797,7 +1096,7 @@ async function runSoulMenu(soul, soulRegistry, key) {
         
         // Save indicator
         process.stdout.write('💾 Saving...');
-        saveSouls(soulRegistry, key);
+        saveSouls(soulRegistry, key, username);
         process.stdout.write(' ✓\n');
         
         console.log('💡 Tip: Ask the same question again later to see how your path evolves.\n');
@@ -899,27 +1198,30 @@ async function runSoulMenu(soul, soulRegistry, key) {
 async function mainMenu() {
   displayBanner();
   
+  // User authentication
+  const userCreds = await loginScreen();
+  if (!userCreds) {
+    // User chose to exit
+    return;
+  }
+  
+  const { username, password } = userCreds;
+  
   const rl = createInterface();
   
-  // Passphrase authentication
-  const isFirstTime = !fileExists(SOULS_FILE);
-  const passphrase = await askPassphrase(rl, isFirstTime);
-  if (!passphrase) {
-    console.log('❌ Cannot proceed without passphrase. Exiting.\n');
-    rl.close();
-    return;
-  }
-  
-  const key = deriveKey(passphrase);
-  let soulRegistry = loadSouls(key);
+  // Use password as passphrase for encrypting soul data
+  // Each user's souls are encrypted with their password
+  const key = deriveKey(password);
+  let soulRegistry = loadSouls(key, username);
   
   if (soulRegistry === null) {
-    // Decryption failed
+    // Decryption failed - shouldn't happen after successful login
+    console.log('❌ Failed to load soul data. This shouldn\'t happen.\n');
     rl.close();
     return;
   }
   
-  console.log('✅ Authentication successful.\n');
+  console.log(`✅ Welcome back, ${username}!\n`);
   
   // First-run welcome
   const soulCount = Object.keys(soulRegistry).length;
@@ -951,7 +1253,7 @@ async function mainMenu() {
         showLoading('🌱 Creating soul...');
         const newSoul = createSoul(name);
         soulRegistry[name] = newSoul;
-        saveSouls(soulRegistry, key);
+        saveSouls(soulRegistry, key, username);
         showLoadingDone();
         console.log(`\n✨ Soul "${name}" created with unique cryptographic seed.`);
         console.log(`💡 Same question to different souls = different answers.`);
@@ -985,7 +1287,7 @@ async function mainMenu() {
         
         const selectedSoul = soulRegistry[soulNames[soulIndex]];
         rl.close();
-        await runSoulMenu(selectedSoul, soulRegistry, key);
+        await runSoulMenu(selectedSoul, soulRegistry, key, username);
         return mainMenu(); // Restart main menu after soul menu exits
       }
       
@@ -1037,7 +1339,7 @@ async function mainMenu() {
         const shouldExit = await confirm(rl, '\n🚪 Exit OINIO?');
         if (shouldExit) {
           console.log('\n🌾 The pattern persists. Farewell.\n');
-          console.log('💾 All data saved to: ' + SOULS_FILE);
+          console.log('💾 All data saved to: ' + getSoulsFilePath(username));
           rl.close();
           return;
         }
