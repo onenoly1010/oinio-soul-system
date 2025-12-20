@@ -12,6 +12,7 @@
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const path = require('path');
+const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
 // 🚀 PERFORMANCE OPTIMIZATIONS
@@ -118,40 +119,15 @@ async function invokeQuantumForge(question, contextData) {
  */
 async function consultQuantumOracle(question, seed, epochNumber) {
   // Phase 1: Deterministic cryptographic reading (OINIO)
-  const combined = `${question}|${seed}|${epochNumber}`;
-  const hash = crypto.createHash('sha256').update(combined, 'utf8').digest();
-  
-  const resonance = (hash[0] % 100) + 1;
-  const clarity = (hash[1] % 100) + 1;
-  const flux = (hash[2] % 100) + 1;
-  const emergence = (hash[3] % 100) + 1;
-  
-  // Pattern recognition (use cached array)
-  const patternIndex = hash.readUInt32BE(4) % PATTERNS.length;
-  const pattern = PATTERNS[patternIndex];
-  
-  // Oracle message (use cached array)
-  const messageIndex = hash.readUInt32BE(8) % MESSAGES.length;
-  const message = MESSAGES[messageIndex];
-  
-  // Base reading
-  const reading = {
-    mode: 'deterministic',
-    resonance,
-    clarity,
-    flux,
-    emergence,
-    pattern,
-    message
-  };
+  const reading = generateDeterministicReading(question, seed, epochNumber);
   
   // Phase 2: Attempt quantum forge enhancement
   try {
     const forgeResult = await invokeQuantumForge(question, {
       seed: seed.substring(0, 8), // Partial seed for privacy
       epoch: epochNumber,
-      resonance,
-      pattern
+      resonance: reading.resonance,
+      pattern: reading.pattern
     });
     
     if (forgeResult && forgeResult.harmony_index !== undefined) {
@@ -179,44 +155,7 @@ async function consultQuantumOracle(question, seed, epochNumber) {
  * Display quantum-enhanced reading
  */
 function displayQuantumReading(reading, epochNumber) {
-  console.log('\n╔═══════════════════════════════════════════════════════════════╗');
-  console.log(`║  🔮 EPOCH ${epochNumber} READING [${reading.mode.toUpperCase()}]`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  Resonance: ${'█'.repeat(Math.floor(reading.resonance / 5))}${' '.repeat(20 - Math.floor(reading.resonance / 5))} ${reading.resonance}%`);
-  console.log(`║  Clarity:   ${'█'.repeat(Math.floor(reading.clarity / 5))}${' '.repeat(20 - Math.floor(reading.clarity / 5))} ${reading.clarity}%`);
-  console.log(`║  Flux:      ${'█'.repeat(Math.floor(reading.flux / 5))}${' '.repeat(20 - Math.floor(reading.flux / 5))} ${reading.flux}%`);
-  console.log(`║  Emergence: ${'█'.repeat(Math.floor(reading.emergence / 5))}${' '.repeat(20 - Math.floor(reading.emergence / 5))} ${reading.emergence}%`);
-  
-  // Quantum harmony layer
-  if (reading.harmonyIndex !== undefined) {
-    const harmonyPercent = Math.round(reading.harmonyIndex * 100);
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Harmony: ${'█'.repeat(Math.floor(harmonyPercent / 5))}${' '.repeat(20 - Math.floor(harmonyPercent / 5))} ${harmonyPercent}%`);
-    console.log(`║  Trend: ${reading.quantumTrend} (${Math.round(reading.quantumConfidence * 100)}% confidence)`);
-  }
-  
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  🌌 Pattern: ${reading.pattern}`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  📜 Oracle: "${reading.message}"`);
-  
-  // Quantum insights
-  if (reading.quantumInsight) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Quantum Insight:`);
-    console.log(`║  ${reading.quantumInsight.substring(0, 60)}`);
-  }
-  
-  // Forge recommendations
-  if (reading.forgeRecommendations && reading.forgeRecommendations.length > 0) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log('║  🔧 Forge Guidance:');
-    reading.forgeRecommendations.slice(0, 2).forEach(rec => {
-      console.log(`║  • ${rec.substring(0, 58)}`);
-    });
-  }
-  
-  console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+  displayReadingShared(reading, epochNumber);
 }
 
 // ═══════════════════════════════════════════════════════════════
