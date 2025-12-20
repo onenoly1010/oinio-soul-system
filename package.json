@@ -1,12 +1,14 @@
 {
   "name": "oinio-soul-system",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "A private encrypted oracle for soul evolution",
   "main": "oinio-system.js",
   "bin": "oinio-system.js",
   "scripts": {
     "start": "node oinio-system.js",
-    "build": "pkg oinio-system.js --targets node18-linux-x64,node18-macos-x64,node18-win-x64 --output dist/oinio-system"
+    "build": "./scripts/build.sh",
+    "verify": "./scripts/verify-build.sh",
+    "release": "npm run build && npm run verify"
   },
   "pkg": {
     "assets": [],
@@ -17,5 +19,24 @@
       "node18-win-x64"
     ],
     "outputPath": "dist"
-  }
+  },
+  "keywords": [
+    "oracle",
+    "divination",
+    "cryptography",
+    "encryption",
+    "deterministic",
+    "soul",
+    "pattern-recognition"
+  ],
+  "author": "OINIO",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onenoly1010/oinio-soul-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/onenoly1010/oinio-soul-system/issues"
+  },
+  "homepage": "https://github.com/onenoly1010/oinio-soul-system#readme"
 }

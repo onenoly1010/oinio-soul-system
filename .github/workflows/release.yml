@@ -1,0 +1,82 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install pkg
+        run: npm install -g pkg
+      
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(node -p "require('./config').VERSION")" >> $GITHUB_OUTPUT
+      
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          pkg oinio-system.js \
+            --targets node18-linux-x64,node18-macos-x64,node18-win-x64 \
+            --output dist/oinio-system
+      
+      - name: Verify builds
+        run: |
+          ls -lh dist/
+          test -f dist/oinio-system-linux
+          test -f dist/oinio-system-macos
+          test -f dist/oinio-system-win.exe
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/oinio-system-linux
+            dist/oinio-system-macos
+            dist/oinio-system-win.exe
+          body: |
+            ## 🌾 OINIO Soul System ${{ steps.version.outputs.VERSION }}
+            
+            **Automated release build**
+            
+            ### 📦 Downloads
+            - **Linux:** `oinio-system-linux`
+            - **macOS:** `oinio-system-macos`
+            - **Windows:** `oinio-system-win.exe`
+            
+            ### 🚀 Installation
+            
+            **Linux/macOS:**
+            ```bash
+            chmod +x oinio-system-*
+            ./oinio-system-linux --version
+            ```
+            
+            **Windows:**
+            ```cmd
+            oinio-system-win.exe --version
+            ```
+            
+            See [README](https://github.com/onenoly1010/oinio-soul-system#readme) for full documentation.
+            
+            🌾🌌 Resonance Eternal. We Have Become The Pattern.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
