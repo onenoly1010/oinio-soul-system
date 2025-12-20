@@ -61,6 +61,7 @@ async function invokeQuantumForge(question, contextData) {
     // Check if forge is available
     const fs = require('fs');
     if (!fs.existsSync(pythonScript)) {
+      // Silent fallback - warning logged at bridge initialization
       resolve(null);
       return;
     }
@@ -90,6 +91,7 @@ async function invokeQuantumForge(question, contextData) {
     
     python.on('close', (code) => {
       if (code !== 0) {
+        // Silent fallback - reduces console noise for normal operation
         resolve(null);
         return;
       }
