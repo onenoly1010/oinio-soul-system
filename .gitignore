@@ -7,7 +7,8 @@ lineage.csv
 node_modules/
 
 # Build artifacts
-dist/*.node
+dist/
+*.node
 *.log
 
 # OS files

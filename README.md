@@ -72,11 +72,18 @@ Dependency-free. Unified. Sealed for executable form.
 ### Build It Yourself (Ultimate Safety)
 Don't trust binaries? Build from source:
 ```bash
-npm install -g pkg
 git clone https://github.com/onenoly1010/oinio-soul-system
 cd oinio-soul-system
-pkg oinio-system.js --targets node18-linux-x64
+npm run build
 ```
+
+Or manually:
+```bash
+npm install -g pkg
+pkg oinio-system.js --targets node18-linux-x64,node18-macos-x64,node18-win-x64
+```
+
+For detailed build instructions, see [Building from Source](#-building-from-source) below.
 
 **Your data stays local.** No network calls. No telemetry. Inspect the code!
 
@@ -158,6 +165,82 @@ This is a **personal oracle system** with **multi-user support**. All data remai
 - Each user has completely separate soul registries
 - Users cannot access each other's souls or data
 - Even with access to encrypted files, data requires the user's password
+
+## 🛠️ Building from Source
+
+OINIO uses automated build scripts for creating cross-platform binaries:
+
+### Prerequisites
+- Node.js 18 or higher
+- `pkg` globally installed (auto-installed by build script if missing)
+
+### Build Commands
+
+```bash
+# Build all platform binaries
+npm run build
+
+# Verify binaries
+npm run verify
+
+# Both build and verify
+npm run release
+```
+
+### Manual Build
+
+```bash
+# Install pkg
+npm install -g pkg
+
+# Build binaries
+./scripts/build.sh
+
+# Verify builds
+./scripts/verify-build.sh
+```
+
+### What Gets Built
+- `dist/oinio-system-linux` - Linux x64
+- `dist/oinio-system-macos` - macOS x64  
+- `dist/oinio-system-win.exe` - Windows x64
+
+Binary sizes: ~35-55 MB (includes Node.js runtime)
+
+## 📋 Release Process
+
+For maintainers releasing new versions:
+
+1. Update version in `config.js` and `package.json`
+2. Update `CHANGELOG.md` with changes
+3. Run `npm run release` to build and verify
+4. Create and push git tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+5. GitHub Actions automatically creates release with binaries
+
+See [.github/RELEASE_CHECKLIST.md](.github/RELEASE_CHECKLIST.md) for complete checklist.
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and changes.
+
+## 🔧 Configuration
+
+OINIO supports environment variables for customization:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PI_FORGE_PATH` | Path to Pi Forge Quantum Genesis | None |
+| `BASE_PATH` | Custom data storage directory | Executable directory |
+| `PBKDF2_ITERATIONS` | Password hashing iterations | `100000` |
+| `QUANTUM_TIMEOUT_MS` | Quantum enhancement timeout | `5000` |
+| `ENABLE_QUANTUM` | Enable/disable quantum mode | `true` |
+
+Example:
+```bash
+export BASE_PATH="/path/to/data"
+export PBKDF2_ITERATIONS=200000
+./oinio-system-linux
+```
 
 ---
 
