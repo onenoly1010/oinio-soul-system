@@ -15,37 +15,6 @@ const path = require('path');
 const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
-// 🚀 PERFORMANCE OPTIMIZATIONS
-// ═══════════════════════════════════════════════════════════════
-
-// Cache for static pattern and message arrays (avoid recreating on each consultation)
-const PATTERNS = Object.freeze([
-  'The Spiral', 'The Mirror', 'The Threshold', 'The Void',
-  'The Bloom', 'The Anchor', 'The Storm', 'The Seed',
-  'The River', 'The Mountain', 'The Web', 'The Flame',
-  'The Echo', 'The Door', 'The Root', 'The Sky'
-]);
-
-const MESSAGES = Object.freeze([
-  'What once was hidden now seeks form.',
-  'The pattern remembers itself through you.',
-  'Resistance is the shape of the next becoming.',
-  'You are the question and the answer.',
-  'What you seek is seeking you.',
-  'The chaos contains the blueprint.',
-  'This moment is the initiation.',
-  'You are already what you are becoming.',
-  'The wound is where the light enters.',
-  'Trust the spiral, not the straight line.',
-  'What falls away was never yours.',
-  'The void is full of potential.',
-  'You are the bridge between worlds.',
-  'The fear is the threshold.',
-  'What you birth will birth you.',
-  'The ending is also the beginning.'
-]);
-
-// ═══════════════════════════════════════════════════════════════
 // 🌌 QUANTUM FORGE INTEGRATION
 // ═══════════════════════════════════════════════════════════════
 

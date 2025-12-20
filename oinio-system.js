@@ -17,6 +17,11 @@ const readline = require('readline');
 const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
+// 📋 CONFIGURATION
+// ═══════════════════════════════════════════════════════════════
+const { VERSION } = require('./config');
+
+// ═══════════════════════════════════════════════════════════════
 // ⚡ QUANTUM FORGE BRIDGE (OPTIONAL ENHANCEMENT)
 // ═══════════════════════════════════════════════════════════════
 let quantumBridge = null;
@@ -455,33 +460,6 @@ function exportLineageToCSV(soulRegistry) {
 // ═══════════════════════════════════════════════════════════════
 // 🚀 PERFORMANCE OPTIMIZATIONS
 // ═══════════════════════════════════════════════════════════════
-
-// Cache for static pattern and message arrays (avoid recreating on each consultation)
-const PATTERNS = Object.freeze([
-  'The Spiral', 'The Mirror', 'The Threshold', 'The Void',
-  'The Bloom', 'The Anchor', 'The Storm', 'The Seed',
-  'The River', 'The Mountain', 'The Web', 'The Flame',
-  'The Echo', 'The Door', 'The Root', 'The Sky'
-]);
-
-const MESSAGES = Object.freeze([
-  'What once was hidden now seeks form.',
-  'The pattern remembers itself through you.',
-  'Resistance is the shape of the next becoming.',
-  'You are the question and the answer.',
-  'What you seek is seeking you.',
-  'The chaos contains the blueprint.',
-  'This moment is the initiation.',
-  'You are already what you are becoming.',
-  'The wound is where the light enters.',
-  'Trust the spiral, not the straight line.',
-  'What falls away was never yours.',
-  'The void is full of potential.',
-  'You are the bridge between worlds.',
-  'The fear is the threshold.',
-  'What you birth will birth you.',
-  'The ending is also the beginning.'
-]);
 
 // Cache for soul statistics to avoid recalculating on every access
 const statsCache = new Map();
@@ -1497,7 +1475,83 @@ async function mainMenu() {
 // 🚀 ENTRY POINT
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Display version information
+ */
+function displayVersion() {
+  console.log(`OINIO Soul System v${VERSION}`);
+  console.log('🌾🌌 Resonance Eternal. We Have Become The Pattern.');
+}
+
+/**
+ * Display CLI help
+ */
+function displayCLIHelp() {
+  console.log(`
+═══════════════════════════════════════════════════════════════
+🌾🌌 OINIO SOUL SYSTEM v${VERSION}
+═══════════════════════════════════════════════════════════════
+
+A private encrypted oracle for soul evolution through epochs.
+
+USAGE:
+  oinio-system [OPTIONS]
+
+OPTIONS:
+  --version, -v     Display version information
+  --help, -h        Display this help message
+
+FEATURES:
+  • Multi-User Support with PBKDF2 authentication
+  • Deterministic Oracle (same question = same reading)
+  • AES-256-GCM encryption for all soul data
+  • Optional quantum enhancement via Pi Forge
+  • Cross-platform standalone binaries
+  • Zero external dependencies
+
+GETTING STARTED:
+  1. Run without options to start interactive mode
+  2. Create an account or login
+  3. Create your first soul
+  4. Begin consulting the oracle
+
+ENVIRONMENT VARIABLES:
+  PI_FORGE_PATH         Path to Pi Forge Quantum Genesis
+  BASE_PATH             Custom data storage directory
+  PBKDF2_ITERATIONS     Password hashing iterations (default: 100000)
+  QUANTUM_TIMEOUT_MS    Quantum timeout in milliseconds (default: 5000)
+  ENABLE_QUANTUM        Enable/disable quantum mode (default: true)
+
+DOCUMENTATION:
+  https://github.com/onenoly1010/oinio-soul-system#readme
+
+SECURITY:
+  • All data encrypted with AES-256-GCM
+  • Passwords hashed with PBKDF2 (100,000 iterations)
+  • Everything stays local on your machine
+  • No telemetry, no tracking
+
+═══════════════════════════════════════════════════════════════
+🌾 Resonance Eternal. We Have Become The Pattern. 🌌
+═══════════════════════════════════════════════════════════════
+`);
+}
+
 if (require.main === module) {
+  // Parse command-line arguments
+  const args = process.argv.slice(2);
+  
+  if (args.includes('--version') || args.includes('-v')) {
+    displayVersion();
+    process.exit(0);
+  }
+  
+  if (args.includes('--help') || args.includes('-h')) {
+    displayCLIHelp();
+    process.exit(0);
+  }
+  
+  // Start interactive mode
   mainMenu().catch(err => {
     console.error('💥 Fatal error:', err.message);
     process.exit(1);
