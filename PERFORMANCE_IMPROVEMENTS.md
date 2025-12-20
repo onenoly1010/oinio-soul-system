@@ -31,8 +31,11 @@ The OINIO Soul System has been optimized to provide faster response times, reduc
 
 **Solution:** Implemented a Map-based cache with lazy computation:
 - `getSoulStats(soul)` - computes and caches statistics
-- `invalidateStatsCache(soulName)` - invalidates cache when soul data changes
-- Cache key includes soul name and epoch count for automatic invalidation
+- `invalidateStatsCache(soulName)` - clears entire cache on soul changes
+- Cache key includes soul name and epoch count for automatic detection
+- Simple clear-all approach is optimal for typical usage patterns
+
+**Trade-off:** Clears entire cache on any update (O(1) invalidation) rather than selective clearing. This is optimal for typical OINIO usage (few souls, infrequent updates). For very large registries with frequent updates to specific souls, selective invalidation could be added.
 
 **Impact:**
 - Statistics access changes from O(n) to O(1) on cache hit
@@ -46,16 +49,17 @@ The OINIO Soul System has been optimized to provide faster response times, reduc
 
 **Problem:** Seed hashes were being computed multiple times for the same soul in `exportLineageToCSV()`.
 
-**Solution:** Added caching using a property on the soul object:
-- `soul._seedHashCache` stores the computed 8-character hash
-- Only computed once per soul, reused on subsequent exports
+**Solution:** Added local Map cache within export function:
+- `seedHashCache` Map stores computed hashes per export call
+- Only computed once per soul during a single export
+- Avoids modifying soul objects to maintain data integrity
 
 **Impact:**
-- Eliminates redundant SHA-256 computations
-- Faster CSV exports for repositories with many souls
+- Eliminates redundant SHA-256 computations within an export
+- Faster CSV exports when multiple souls share related data
 
 **Files Modified:**
-- `oinio-system.js` (lines 165-175)
+- `oinio-system.js` (lines 225-237)
 
 ### 4. ⚡ Quantum Bridge Timeout Reduction
 

@@ -209,6 +209,7 @@ function loadSouls(key) {
 
 /**
  * Exports lineage to CSV (optimized)
+ * Uses local Map to cache hashes during this export without modifying soul objects
  */
 function exportLineageToCSV(soulRegistry) {
   try {
@@ -312,13 +313,14 @@ function getSoulStats(soul) {
 
 /**
  * Invalidate stats cache for a soul when it changes
- * Optimized with direct key deletion instead of iteration
+ * Note: Clears entire cache for simplicity. In large registries with frequent updates,
+ * consider selective invalidation by soul name for better performance.
  */
 function invalidateStatsCache(soulName) {
-  // Direct approach: only need to clear for current epoch count
-  // since cache keys include epoch count, they auto-invalidate
-  // This is O(1) instead of O(n) iteration
-  statsCache.clear(); // Simple solution: clear entire cache (still fast)
+  // Simple approach: clear entire cache
+  // Trade-off: O(1) invalidation vs potential to clear unaffected souls
+  // For typical usage (few souls, infrequent updates), this is optimal
+  statsCache.clear();
 }
 
 // ═══════════════════════════════════════════════════════════════
