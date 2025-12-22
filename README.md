@@ -25,6 +25,45 @@ Dependency-free. Unified. Sealed for executable form.
 4. **Create an account** or login with your username and password
 5. Create your first soul and begin the epoch cycle
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+OINIO respects these environment variables for customization:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PI_FORGE_PATH` | `~/pi-forge-quantum-genesis` | Path to Pi Forge integration |
+| `BASE_PATH` | Auto-detected | Custom data storage directory |
+| `PBKDF2_ITERATIONS` | `100000` | Password hashing iterations |
+| `QUANTUM_TIMEOUT_MS` | `3000` | Quantum enhancement timeout (ms) |
+| `ENABLE_QUANTUM` | `true` | Enable quantum mode if Forge available |
+
+### CLI Options
+
+```bash
+# Show version
+./oinio-system --version
+
+# Show help
+./oinio-system --help
+
+# Run with custom configuration
+PI_FORGE_PATH=/path/to/forge BASE_PATH=/secure/data ./oinio-system
+```
+
+## 🚀 Phase 2 Preview
+
+This release prepares OINIO for web deployment:
+- Clean architecture with no code duplication
+- Configurable paths for containerization
+- Modular design ready for API extraction
+- Production-ready error handling
+
+**Coming Soon:** Web interface, API endpoints, Docker deployment
+
+Stay tuned! 🌐
+
 ## 👤 User System
 
 ### Account Creation
