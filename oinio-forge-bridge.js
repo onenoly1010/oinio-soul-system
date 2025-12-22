@@ -137,7 +137,8 @@ function displayQuantumReading(reading, epochNumber) {
  * Determine if quantum forge is available
  */
 async function isForgeAvailable() {
-  const forgePath = process.env.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
+  const forgePath = process.env.PI_FORGE_PATH || 
+    path.join(process.env.HOME || process.env.USERPROFILE || '.', 'pi-forge-quantum-genesis');
   const fs = require('fs');
   return fs.existsSync(path.join(forgePath, 'quantum_ai_enhancer.py'));
 }
