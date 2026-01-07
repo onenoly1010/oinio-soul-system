@@ -65,8 +65,6 @@ The platform respects these environment variables for customization:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PI_FORGE_PATH` | `~/pi-forge-quantum-genesis` | Path to Pi Forge installation |
-| `QUANTUM_TIMEOUT_MS` | `3000` | Quantum API timeout in milliseconds |
-| `ENABLE_QUANTUM` | `true` | Enable/disable quantum enhancements |
 
 ### ✨ Enhanced Reading Features
 
@@ -127,7 +125,6 @@ The combined platform excels at:
 
 - **OINIO Repository:** https://github.com/onenoly1010/oinio-soul-system
 - **Pi Forge Repository:** https://github.com/onenoly1010/pi-forge-quantum-genesis
-- **Integration Guide:** [OINIO-FORGE-INTEGRATION.md](../OINIO-FORGE-INTEGRATION.md)
 - **Main README:** [README.md](../README.md)
 
 ### 🛠️ Troubleshooting
@@ -139,14 +136,13 @@ The combined platform excels at:
 - Check OINIO console for Forge availability warnings
 
 **Timeout errors?**
-- Increase `QUANTUM_TIMEOUT_MS` (default: 3000ms)
+- The quantum request timeout is currently fixed at 3000ms in the implementation
 - Verify Python dependencies are installed
 - Check Pi Forge repository is complete (not partial clone)
 
 **Want pure deterministic mode?**
 - Simply don't install Pi Forge — OINIO works standalone
 - Or press **[Q]** in soul menu to toggle quantum mode off
-- Set `ENABLE_QUANTUM=false` to disable integration
 
 ### 🌌 Ecosystem Vision
 
