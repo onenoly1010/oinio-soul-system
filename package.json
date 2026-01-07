@@ -6,7 +6,10 @@
   "bin": "oinio-system.js",
   "scripts": {
     "start": "node oinio-system.js",
-    "build": "pkg oinio-system.js --targets node18-linux-x64,node18-macos-x64,node18-win-x64 --output dist/oinio-system"
+    "build": "npx pkg oinio-system.js --targets node18-linux-x64,node18-macos-x64,node18-win-x64 --output dist/oinio-system"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
   },
   "pkg": {
     "assets": [],
