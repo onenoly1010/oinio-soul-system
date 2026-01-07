@@ -111,11 +111,24 @@ Stay tuned! 🌐
 ### Build It Yourself (Ultimate Safety)
 Don't trust binaries? Build from source:
 ```bash
-npm install -g pkg
+# Clone the repository
 git clone https://github.com/onenoly1010/oinio-soul-system
 cd oinio-soul-system
-pkg oinio-system.js --targets node18-linux-x64
+
+# Install dependencies
+npm install
+
+# Build binaries for all platforms (Linux, macOS, Windows)
+npm run build
+
+# Or build for a specific platform only
+npx pkg oinio-system.js --targets node18-linux-x64 --output dist/oinio-system-linux
 ```
+
+The `npm run build` command will create three binaries in the `dist/` directory:
+- `oinio-system-linux` — Linux x64
+- `oinio-system-macos` — macOS x64  
+- `oinio-system-win.exe` — Windows x64
 
 **Your data stays local.** No network calls. No telemetry. Inspect the code!
 
