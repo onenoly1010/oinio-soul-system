@@ -12,6 +12,7 @@
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const path = require('path');
+const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
 // 🌌 QUANTUM FORGE INTEGRATION
@@ -19,17 +20,20 @@ const path = require('path');
 
 /**
  * Calls Pi Forge Quantum AI Enhancer for harmony predictions
+ * Optimized with reduced timeout (3s instead of 5s)
  */
 async function invokeQuantumForge(question, contextData) {
   return new Promise((resolve, reject) => {
     // Path to your pi-forge-quantum-genesis repository
-    const forgePath = process.env.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
+    // Better fallback path that works cross-platform
+    const forgePath = process.env.PI_FORGE_PATH || 
+      path.join(process.env.HOME || process.env.USERPROFILE || '.', 'pi-forge-quantum-genesis');
     const pythonScript = path.join(forgePath, 'quantum_ai_enhancer.py');
     
     // Check if forge is available
     const fs = require('fs');
     if (!fs.existsSync(pythonScript)) {
-      console.log('⚠️  Quantum Forge not found, using standard oracle mode');
+      // Silent fallback - warning logged at bridge initialization
       resolve(null);
       return;
     }
@@ -59,7 +63,7 @@ async function invokeQuantumForge(question, contextData) {
     
     python.on('close', (code) => {
       if (code !== 0) {
-        console.log('⚠️  Quantum Forge unavailable, falling back to deterministic mode');
+        // Silent fallback - reduces console noise for normal operation
         resolve(null);
         return;
       }
@@ -72,77 +76,29 @@ async function invokeQuantumForge(question, contextData) {
       }
     });
     
-    // Timeout after 5 seconds
+    // Reduced timeout from 5s to 3s for better performance
     setTimeout(() => {
       python.kill();
       resolve(null);
-    }, 5000);
+    }, 3000);
   });
 }
 
 /**
  * Enhanced oracle consultation with quantum forge integration
+ * Optimized to use cached pattern/message arrays
  */
 async function consultQuantumOracle(question, seed, epochNumber) {
   // Phase 1: Deterministic cryptographic reading (OINIO)
-  const combined = `${question}|${seed}|${epochNumber}`;
-  const hash = crypto.createHash('sha256').update(combined, 'utf8').digest();
-  
-  const resonance = (hash[0] % 100) + 1;
-  const clarity = (hash[1] % 100) + 1;
-  const flux = (hash[2] % 100) + 1;
-  const emergence = (hash[3] % 100) + 1;
-  
-  const patterns = [
-    'The Spiral', 'The Mirror', 'The Threshold', 'The Void',
-    'The Bloom', 'The Anchor', 'The Storm', 'The Seed',
-    'The River', 'The Mountain', 'The Web', 'The Flame',
-    'The Echo', 'The Door', 'The Root', 'The Sky'
-  ];
-  
-  const patternIndex = hash.readUInt32BE(4) % patterns.length;
-  const pattern = patterns[patternIndex];
-  
-  const messages = [
-    'What once was hidden now seeks form.',
-    'The pattern remembers itself through you.',
-    'Resistance is the shape of the next becoming.',
-    'You are the question and the answer.',
-    'What you seek is seeking you.',
-    'The chaos contains the blueprint.',
-    'This moment is the initiation.',
-    'You are already what you are becoming.',
-    'The wound is where the light enters.',
-    'Trust the spiral, not the straight line.',
-    'What falls away was never yours.',
-    'The void is full of potential.',
-    'You are the bridge between worlds.',
-    'The fear is the threshold.',
-    'What you birth will birth you.',
-    'The ending is also the beginning.'
-  ];
-  
-  const messageIndex = hash.readUInt32BE(8) % messages.length;
-  const message = messages[messageIndex];
-  
-  // Base reading
-  const reading = {
-    mode: 'deterministic',
-    resonance,
-    clarity,
-    flux,
-    emergence,
-    pattern,
-    message
-  };
+  const reading = generateDeterministicReading(question, seed, epochNumber);
   
   // Phase 2: Attempt quantum forge enhancement
   try {
     const forgeResult = await invokeQuantumForge(question, {
       seed: seed.substring(0, 8), // Partial seed for privacy
       epoch: epochNumber,
-      resonance,
-      pattern
+      resonance: reading.resonance,
+      pattern: reading.pattern
     });
     
     if (forgeResult && forgeResult.harmony_index !== undefined) {
@@ -170,44 +126,7 @@ async function consultQuantumOracle(question, seed, epochNumber) {
  * Display quantum-enhanced reading
  */
 function displayQuantumReading(reading, epochNumber) {
-  console.log('\n╔═══════════════════════════════════════════════════════════════╗');
-  console.log(`║  🔮 EPOCH ${epochNumber} READING [${reading.mode.toUpperCase()}]`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  Resonance: ${'█'.repeat(Math.floor(reading.resonance / 5))}${' '.repeat(20 - Math.floor(reading.resonance / 5))} ${reading.resonance}%`);
-  console.log(`║  Clarity:   ${'█'.repeat(Math.floor(reading.clarity / 5))}${' '.repeat(20 - Math.floor(reading.clarity / 5))} ${reading.clarity}%`);
-  console.log(`║  Flux:      ${'█'.repeat(Math.floor(reading.flux / 5))}${' '.repeat(20 - Math.floor(reading.flux / 5))} ${reading.flux}%`);
-  console.log(`║  Emergence: ${'█'.repeat(Math.floor(reading.emergence / 5))}${' '.repeat(20 - Math.floor(reading.emergence / 5))} ${reading.emergence}%`);
-  
-  // Quantum harmony layer
-  if (reading.harmonyIndex !== undefined) {
-    const harmonyPercent = Math.round(reading.harmonyIndex * 100);
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Harmony: ${'█'.repeat(Math.floor(harmonyPercent / 5))}${' '.repeat(20 - Math.floor(harmonyPercent / 5))} ${harmonyPercent}%`);
-    console.log(`║  Trend: ${reading.quantumTrend} (${Math.round(reading.quantumConfidence * 100)}% confidence)`);
-  }
-  
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  🌌 Pattern: ${reading.pattern}`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  📜 Oracle: "${reading.message}"`);
-  
-  // Quantum insights
-  if (reading.quantumInsight) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Quantum Insight:`);
-    console.log(`║  ${reading.quantumInsight.substring(0, 60)}`);
-  }
-  
-  // Forge recommendations
-  if (reading.forgeRecommendations && reading.forgeRecommendations.length > 0) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log('║  🔧 Forge Guidance:');
-    reading.forgeRecommendations.slice(0, 2).forEach(rec => {
-      console.log(`║  • ${rec.substring(0, 58)}`);
-    });
-  }
-  
-  console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+  displayReadingShared(reading, epochNumber);
 }
 
 // ═══════════════════════════════════════════════════════════════

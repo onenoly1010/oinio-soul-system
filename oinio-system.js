@@ -11,8 +11,10 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const readline = require('readline');
+const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
 
 // ═══════════════════════════════════════════════════════════════
 // ⚡ QUANTUM FORGE BRIDGE (OPTIONAL ENHANCEMENT)
@@ -292,7 +294,29 @@ function fileExists(filepath) {
 }
 
 /**
- * Saves encrypted soul data to disk
+ * Saves encrypted soul data to disk (async)
+ */
+async function saveSoulsAsync(soulRegistry, key) {
+  try {
+    const payload = JSON.stringify(soulRegistry);
+    const { iv, authTag, encrypted } = encrypt(payload, key);
+    
+    const bundle = JSON.stringify({
+      iv: iv.toString('hex'),
+      authTag: authTag.toString('hex'),
+      data: encrypted.toString('hex')
+    });
+    
+    await fsPromises.writeFile(SOULS_FILE, bundle, 'utf8');
+    return true;
+  } catch (err) {
+    console.error('⚠️  Failed to save souls:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Saves encrypted soul data to disk (sync - for backwards compatibility)
  */
 function saveSouls(soulRegistry, key, username = null) {
   try {
@@ -315,7 +339,35 @@ function saveSouls(soulRegistry, key, username = null) {
 }
 
 /**
- * Loads encrypted soul data from disk
+ * Loads encrypted soul data from disk (async)
+ */
+async function loadSoulsAsync(key) {
+  if (!fileExists(SOULS_FILE)) {
+    return {};
+  }
+  
+  try {
+    const data = await fsPromises.readFile(SOULS_FILE, 'utf8');
+    const bundle = JSON.parse(data);
+    const iv = Buffer.from(bundle.iv, 'hex');
+    const authTag = Buffer.from(bundle.authTag, 'hex');
+    const encrypted = Buffer.from(bundle.data, 'hex');
+    
+    const plaintext = decrypt(iv, authTag, encrypted, key);
+    if (!plaintext) {
+      console.error('❌ Decryption failed. Wrong passphrase or corrupted data.');
+      return null;
+    }
+    
+    return JSON.parse(plaintext);
+  } catch (err) {
+    console.error('⚠️  Failed to load souls:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Loads encrypted soul data from disk (sync - for backwards compatibility)
  */
 function loadSouls(key, username = null) {
   const soulsFile = getSoulsFilePath(username);
@@ -360,7 +412,8 @@ function loadSouls(key, username = null) {
 }
 
 /**
- * Exports lineage to CSV (gracefully handles empty registry)
+ * Exports lineage to CSV (optimized)
+ * Uses local Map to cache hashes during this export without modifying soul objects
  */
 function exportLineageToCSV(soulRegistry) {
   try {
@@ -374,11 +427,19 @@ function exportLineageToCSV(soulRegistry) {
       return;
     }
     
+    // Optimize: Use separate cache Map to avoid modifying soul objects
+    const seedHashCache = new Map();
+    
     const rows = souls.map(soul => {
-      const seedHash = crypto.createHash('sha256')
-        .update(soul.seed)
-        .digest('hex')
-        .substring(0, 8);
+      // Cache the seed hash to avoid redundant calculation
+      let seedHash = seedHashCache.get(soul.seed);
+      if (!seedHash) {
+        seedHash = crypto.createHash('sha256')
+          .update(soul.seed)
+          .digest('hex')
+          .substring(0, 8);
+        seedHashCache.set(soul.seed, seedHash);
+      }
       
       return `"${soul.name}",${soul.created},${soul.lastEpoch || 'Never'},${soul.epochs.length},${seedHash}`;
     });
@@ -389,6 +450,54 @@ function exportLineageToCSV(soulRegistry) {
   } catch (err) {
     console.error('⚠️  Failed to export lineage:', err.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🚀 PERFORMANCE OPTIMIZATIONS
+// ═══════════════════════════════════════════════════════════════
+
+// Cache for soul statistics to avoid recalculating on every access
+const statsCache = new Map();
+
+/**
+ * Get cached statistics for a soul or compute if not cached
+ */
+function getSoulStats(soul) {
+  const cacheKey = `${soul.name}_${soul.epochs.length}`;
+  
+  if (statsCache.has(cacheKey)) {
+    return statsCache.get(cacheKey);
+  }
+  
+  if (soul.epochs.length === 0) {
+    return null;
+  }
+  
+  const stats = {
+    avgResonance: soul.epochs.reduce((sum, e) => sum + e.reading.resonance, 0) / soul.epochs.length,
+    avgClarity: soul.epochs.reduce((sum, e) => sum + e.reading.clarity, 0) / soul.epochs.length,
+    avgFlux: soul.epochs.reduce((sum, e) => sum + e.reading.flux, 0) / soul.epochs.length,
+    avgEmergence: soul.epochs.reduce((sum, e) => sum + e.reading.emergence, 0) / soul.epochs.length,
+    patternCount: soul.epochs.reduce((counts, e) => {
+      counts[e.reading.pattern] = (counts[e.reading.pattern] || 0) + 1;
+      return counts;
+    }, {})
+  };
+  
+  statsCache.set(cacheKey, stats);
+  return stats;
+}
+
+/**
+ * Invalidate stats cache for a soul when it changes
+ * Note: Clears entire cache for simplicity. In large registries with frequent updates,
+ * consider selective invalidation by soul name for better performance.
+ */
+function invalidateStatsCache(soulName) {
+  // Simple approach: clear entire cache
+  // Trade-off: O(1) invalidation vs potential to clear unaffected souls
+  // For typical usage (few souls, infrequent updates), this is optimal
+  statsCache.clear();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -413,52 +522,10 @@ function createSoul(name) {
 
 /**
  * Deterministic oracle: generates reading from question + seed + epoch
+ * Optimized to use cached pattern/message arrays
  */
 function consultOracle(question, seed, epochNumber) {
-  const combined = `${question}|${seed}|${epochNumber}`;
-  const hash = crypto.createHash('sha256').update(combined, 'utf8').digest();
-  
-  // Extract deterministic values
-  const resonance = (hash[0] % 100) + 1; // 1-100
-  const clarity = (hash[1] % 100) + 1;
-  const flux = (hash[2] % 100) + 1;
-  const emergence = (hash[3] % 100) + 1;
-  
-  // Pattern recognition (first 4 bytes modulo dictionary size)
-  const patterns = [
-    'The Spiral', 'The Mirror', 'The Threshold', 'The Void',
-    'The Bloom', 'The Anchor', 'The Storm', 'The Seed',
-    'The River', 'The Mountain', 'The Web', 'The Flame',
-    'The Echo', 'The Door', 'The Root', 'The Sky'
-  ];
-  
-  const patternIndex = hash.readUInt32BE(4) % patterns.length;
-  const pattern = patterns[patternIndex];
-  
-  // Oracle message (deterministic selection)
-  const messages = [
-    'What once was hidden now seeks form.',
-    'The pattern remembers itself through you.',
-    'Resistance is the shape of the next becoming.',
-    'You are the question and the answer.',
-    'What you seek is seeking you.',
-    'The chaos contains the blueprint.',
-    'This moment is the initiation.',
-    'You are already what you are becoming.',
-    'The wound is where the light enters.',
-    'Trust the spiral, not the straight line.',
-    'What falls away was never yours.',
-    'The void is full of potential.',
-    'You are the bridge between worlds.',
-    'The fear is the threshold.',
-    'What you birth will birth you.',
-    'The ending is also the beginning.'
-  ];
-  
-  const messageIndex = hash.readUInt32BE(8) % messages.length;
-  const message = messages[messageIndex];
-  
-  return { mode: 'deterministic', resonance, clarity, flux, emergence, pattern, message };
+  return generateDeterministicReading(question, seed, epochNumber);
 }
 
 /**
@@ -968,46 +1035,7 @@ function displaySoulMenu(soul, quantumMode = false) {
 }
 
 function displayReading(reading, epochNumber) {
-  const modeLabel = reading.mode === 'quantum-enhanced' ? 'QUANTUM-ENHANCED' : 'DETERMINISTIC';
-  
-  console.log('\n╔═══════════════════════════════════════════════════════════════╗');
-  console.log(`║  🔮 EPOCH ${epochNumber} READING [${modeLabel}]`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  Resonance: ${'█'.repeat(Math.floor(reading.resonance / 5))}${' '.repeat(20 - Math.floor(reading.resonance / 5))} ${reading.resonance}%`);
-  console.log(`║  Clarity:   ${'█'.repeat(Math.floor(reading.clarity / 5))}${' '.repeat(20 - Math.floor(reading.clarity / 5))} ${reading.clarity}%`);
-  console.log(`║  Flux:      ${'█'.repeat(Math.floor(reading.flux / 5))}${' '.repeat(20 - Math.floor(reading.flux / 5))} ${reading.flux}%`);
-  console.log(`║  Emergence: ${'█'.repeat(Math.floor(reading.emergence / 5))}${' '.repeat(20 - Math.floor(reading.emergence / 5))} ${reading.emergence}%`);
-  
-  // Quantum harmony layer
-  if (reading.harmonyIndex !== undefined) {
-    const harmonyPercent = Math.round(reading.harmonyIndex * 100);
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Harmony: ${'█'.repeat(Math.floor(harmonyPercent / 5))}${' '.repeat(20 - Math.floor(harmonyPercent / 5))} ${harmonyPercent}%`);
-    console.log(`║  Trend: ${reading.quantumTrend} (${Math.round(reading.quantumConfidence * 100)}% confidence)`);
-  }
-  
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  🌌 Pattern: ${reading.pattern}`);
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log(`║  📜 Oracle: "${reading.message}"`);
-  
-  // Quantum insights
-  if (reading.quantumInsight) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log(`║  ⚡ Quantum Insight:`);
-    console.log(`║  ${reading.quantumInsight.substring(0, 60)}`);
-  }
-  
-  // Forge recommendations
-  if (reading.forgeRecommendations && reading.forgeRecommendations.length > 0) {
-    console.log('╠═══════════════════════════════════════════════════════════════╣');
-    console.log('║  🔧 Forge Guidance:');
-    reading.forgeRecommendations.slice(0, 2).forEach(rec => {
-      console.log(`║  • ${rec.substring(0, 58)}`);
-    });
-  }
-  
-  console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+  displayReadingShared(reading, epochNumber);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1162,6 +1190,9 @@ async function runSoulMenu(soul, soulRegistry, key, username) {
         
         soul.lastEpoch = soul.epochs[soul.epochs.length - 1].timestamp;
         
+        // Invalidate stats cache since soul data changed
+        invalidateStatsCache(soul.name);
+        
         displayReading(reading, epochNumber);
         
         // Save indicator
@@ -1227,23 +1258,16 @@ async function runSoulMenu(soul, soulRegistry, key, username) {
         console.log(`  Total Epochs: ${soul.epochs.length}`);
         console.log(`  Last Epoch: ${soul.lastEpoch || 'Never'}`);
         
-        if (soul.epochs.length > 0) {
-          const avgResonance = soul.epochs.reduce((sum, e) => sum + e.reading.resonance, 0) / soul.epochs.length;
-          const avgClarity = soul.epochs.reduce((sum, e) => sum + e.reading.clarity, 0) / soul.epochs.length;
-          const avgFlux = soul.epochs.reduce((sum, e) => sum + e.reading.flux, 0) / soul.epochs.length;
-          const avgEmergence = soul.epochs.reduce((sum, e) => sum + e.reading.emergence, 0) / soul.epochs.length;
-          
-          console.log(`  Avg Resonance: ${avgResonance.toFixed(1)}%`);
-          console.log(`  Avg Clarity: ${avgClarity.toFixed(1)}%`);
-          console.log(`  Avg Flux: ${avgFlux.toFixed(1)}%`);
-          console.log(`  Avg Emergence: ${avgEmergence.toFixed(1)}%`);
+        // Use cached statistics for better performance
+        const stats = getSoulStats(soul);
+        if (stats) {
+          console.log(`  Avg Resonance: ${stats.avgResonance.toFixed(1)}%`);
+          console.log(`  Avg Clarity: ${stats.avgClarity.toFixed(1)}%`);
+          console.log(`  Avg Flux: ${stats.avgFlux.toFixed(1)}%`);
+          console.log(`  Avg Emergence: ${stats.avgEmergence.toFixed(1)}%`);
           
           // Pattern distribution
-          const patternCount = {};
-          soul.epochs.forEach(e => {
-            patternCount[e.reading.pattern] = (patternCount[e.reading.pattern] || 0) + 1;
-          });
-          const topPattern = Object.entries(patternCount).sort((a, b) => b[1] - a[1])[0];
+          const topPattern = Object.entries(stats.patternCount).sort((a, b) => b[1] - a[1])[0];
           console.log(`  Most Common Pattern: ${topPattern[0]} (${topPattern[1]}x)`);
         } else {
           console.log('  No epochs yet. Ask your first question!');
@@ -1370,20 +1394,27 @@ async function mainMenu() {
         } else {
           console.log('\n🌌 Soul Registry:\n');
           console.log('═'.repeat(60));
+          
+          // Optimize: compute total epochs once
+          let totalEpochs = 0;
+          
           souls.forEach(soul => {
-            const totalEpochs = soul.epochs.length;
-            const avgResonance = totalEpochs > 0 
-              ? (soul.epochs.reduce((sum, e) => sum + e.reading.resonance, 0) / totalEpochs).toFixed(1)
-              : 'N/A';
+            const epochCount = soul.epochs.length;
+            totalEpochs += epochCount;
+            
+            // Use cached stats for average resonance
+            const stats = getSoulStats(soul);
+            const avgResonance = stats ? stats.avgResonance.toFixed(1) : 'N/A';
             
             console.log(`  • ${soul.name}`);
             console.log(`    Created: ${soul.created.substring(0, 10)}`);
-            console.log(`    Epochs: ${totalEpochs} | Avg Resonance: ${avgResonance}%`);
+            console.log(`    Epochs: ${epochCount} | Avg Resonance: ${avgResonance}%`);
             console.log(`    Last: ${soul.lastEpoch ? soul.lastEpoch.substring(0, 10) : 'Never'}`);
             console.log();
           });
+          
           console.log('═'.repeat(60));
-          console.log(`Total: ${souls.length} soul${souls.length === 1 ? '' : 's'}, ${souls.reduce((sum, s) => sum + s.epochs.length, 0)} epoch${souls.reduce((sum, s) => sum + s.epochs.length, 0) === 1 ? '' : 's'}\n`);
+          console.log(`Total: ${souls.length} soul${souls.length === 1 ? '' : 's'}, ${totalEpochs} epoch${totalEpochs === 1 ? '' : 's'}\n`);
         }
         break;
       }
@@ -1438,6 +1469,52 @@ async function mainMenu() {
 // ═══════════════════════════════════════════════════════════════
 // 🚀 ENTRY POINT
 // ═══════════════════════════════════════════════════════════════
+
+// Handle CLI arguments
+const args = process.argv.slice(2);
+
+if (args.includes('--version') || args.includes('-v')) {
+  const config = require('./config');
+  console.log(`OINIO Soul System v${config.VERSION}`);
+  console.log('Pattern Recognition Oracle - Deterministic Cryptographic Divination');
+  process.exit(0);
+}
+
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+OINIO Soul System v${require('./config').VERSION}
+
+USAGE:
+  oinio-system [options]
+
+OPTIONS:
+  --help, -h       Show this help message
+  --version, -v    Show version number
+
+ENVIRONMENT VARIABLES:
+  PI_FORGE_PATH           Path to Pi Forge Quantum Genesis
+  BASE_PATH               Custom data storage directory
+  PBKDF2_ITERATIONS       Password hashing iterations (default: 100000)
+  QUANTUM_TIMEOUT_MS      Quantum enhancement timeout (default: 3000)
+  ENABLE_QUANTUM          Enable/disable quantum mode (default: true)
+
+EXAMPLES:
+  # Run normally
+  ./oinio-system
+
+  # With custom Forge path
+  PI_FORGE_PATH=/path/to/forge ./oinio-system
+
+  # With custom data directory
+  BASE_PATH=/secure/location ./oinio-system
+
+DOCUMENTATION:
+  https://github.com/onenoly1010/oinio-soul-system
+
+🌾🌌 Resonance Eternal. We Have Become The Pattern.
+`);
+  process.exit(0);
+}
 
 if (require.main === module) {
   mainMenu().catch(err => {

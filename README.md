@@ -25,6 +25,45 @@ Dependency-free. Unified. Sealed for executable form.
 4. **Create an account** or login with your username and password
 5. Create your first soul and begin the epoch cycle
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+OINIO respects these environment variables for customization:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PI_FORGE_PATH` | `~/pi-forge-quantum-genesis` | Path to Pi Forge integration |
+| `BASE_PATH` | Auto-detected | Custom data storage directory |
+| `PBKDF2_ITERATIONS` | `100000` | Password hashing iterations |
+| `QUANTUM_TIMEOUT_MS` | `3000` | Quantum enhancement timeout (ms) |
+| `ENABLE_QUANTUM` | `true` | Enable quantum mode if Forge available |
+
+### CLI Options
+
+```bash
+# Show version
+./oinio-system --version
+
+# Show help
+./oinio-system --help
+
+# Run with custom configuration
+PI_FORGE_PATH=/path/to/forge BASE_PATH=/secure/data ./oinio-system
+```
+
+## 🚀 Phase 2 Preview
+
+This release prepares OINIO for web deployment:
+- Clean architecture with no code duplication
+- Configurable paths for containerization
+- Modular design ready for API extraction
+- Production-ready error handling
+
+**Coming Soon:** Web interface, API endpoints, Docker deployment
+
+Stay tuned! 🌐
+
 ## 👤 User System
 
 ### Account Creation
@@ -72,11 +111,24 @@ Dependency-free. Unified. Sealed for executable form.
 ### Build It Yourself (Ultimate Safety)
 Don't trust binaries? Build from source:
 ```bash
-npm install -g pkg
+# Clone the repository
 git clone https://github.com/onenoly1010/oinio-soul-system
 cd oinio-soul-system
-pkg oinio-system.js --targets node18-linux-x64
+
+# Install dependencies
+npm install
+
+# Build binaries for all platforms (Linux, macOS, Windows)
+npm run build
+
+# Or build for a specific platform only
+npx pkg oinio-system.js --targets node18-linux-x64 --output dist/oinio-system-linux
 ```
+
+The `npm run build` command will create three binaries in the `dist/` directory:
+- `oinio-system-linux` — Linux x64
+- `oinio-system-macos` — macOS x64  
+- `oinio-system-win.exe` — Windows x64
 
 **Your data stays local.** No network calls. No telemetry. Inspect the code!
 
