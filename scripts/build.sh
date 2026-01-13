@@ -34,6 +34,13 @@ pkg oinio-system.js \
   --targets node18-linux-x64,node18-macos-x64,node18-win-x64 \
   --output dist/oinio-system
 
+echo "🔑 Setting executable permissions on Unix binaries..."
+if [ -f "dist/oinio-system-linux" ]; then
+    chmod +x dist/oinio-system-linux
+fi
+if [ -f "dist/oinio-system-macos" ]; then
+    chmod +x dist/oinio-system-macos
+fi
 echo ""
 echo "✅ Build complete!"
 echo ""
