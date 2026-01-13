@@ -1518,9 +1518,6 @@ GETTING STARTED:
 ENVIRONMENT VARIABLES:
   PI_FORGE_PATH         Path to Pi Forge Quantum Genesis
   BASE_PATH             Custom data storage directory
-  PBKDF2_ITERATIONS     Password hashing iterations (default: 100000)
-  QUANTUM_TIMEOUT_MS    Quantum timeout in milliseconds (default: 5000)
-  ENABLE_QUANTUM        Enable/disable quantum mode (default: true)
 
 DOCUMENTATION:
   https://github.com/onenoly1010/oinio-soul-system#readme
