@@ -8,7 +8,7 @@
     "start": "node oinio-system.js",
     "build": "./scripts/build.sh",
     "verify": "./scripts/verify-build.sh",
-    "release": "npm run build && npm run verify"
+    "release": "echo \"Note: build and verify require a Unix-like shell on Windows (e.g., WSL or Git Bash).\" && npm run build && npm run verify"
   },
   "pkg": {
     "assets": [],
