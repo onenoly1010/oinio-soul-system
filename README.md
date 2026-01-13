@@ -173,8 +173,11 @@ OINIO uses automated build scripts for creating cross-platform binaries:
 ### Prerequisites
 - Node.js 18 or higher
 - `pkg` globally installed (auto-installed by build script if missing)
+- Unix-like shell (bash) - On Windows, use WSL, Git Bash, or similar
 
 ### Build Commands
+
+**Note:** The build and verify scripts require a Unix-like shell. On Windows, use WSL, Git Bash, or similar.
 
 ```bash
 # Build all platform binaries
@@ -190,8 +193,11 @@ npm run release
 ### Manual Build
 
 ```bash
-# Install pkg
-npm install -g pkg
+# Make scripts executable (Linux/macOS)
+chmod +x scripts/*.sh
+
+# Install pkg (pinned version recommended for security)
+npm install -g pkg@5.8.1
 
 # Build binaries
 ./scripts/build.sh

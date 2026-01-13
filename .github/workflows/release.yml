@@ -15,15 +15,15 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61b5bc031e # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.3
         with:
           node-version: '18'
       
       - name: Install pkg
-        run: npm install -g pkg
+        run: npm install -g pkg@5.8.1
       
       - name: Get version
         id: version
@@ -44,7 +44,7 @@ jobs:
           test -f dist/oinio-system-win.exe
       
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
         with:
           files: |
             dist/oinio-system-linux
