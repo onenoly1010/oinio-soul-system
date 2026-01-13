@@ -1,5 +1,5 @@
 #!/bin/bash
-# Don't exit on first error - we want to collect all test results
+# Don't exit on first error - collect all test results then exit with proper code
 set +e
 
 echo "🧪 OINIO Binary Verification"

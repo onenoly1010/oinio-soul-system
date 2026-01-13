@@ -12,7 +12,10 @@ function parseIntSafe(value, defaultValue, min = null) {
   if (isNaN(parsed)) {
     return defaultValue;
   }
-  return min !== null ? Math.max(min, parsed) : parsed;
+  if (min !== null) {
+    return Math.max(min, parsed);
+  }
+  return parsed;
 }
 
 module.exports = {
