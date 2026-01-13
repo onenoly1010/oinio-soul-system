@@ -1516,6 +1516,7 @@ GETTING STARTED:
   4. Begin consulting the oracle
 
 ENVIRONMENT VARIABLES:
+  (Defined for future use; not yet active in v1.3.0)
   PI_FORGE_PATH         Path to Pi Forge Quantum Genesis
   BASE_PATH             Custom data storage directory
 
