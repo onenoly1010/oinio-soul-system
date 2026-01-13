@@ -26,7 +26,7 @@ const { config } = require('./config');
 async function invokeQuantumForge(question, contextData) {
   return new Promise((resolve, reject) => {
     // Path to your pi-forge-quantum-genesis repository
-    const forgePath = config.PI_FORGE_PATH || process.env.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
+    const forgePath = config.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
     const pythonScript = path.join(forgePath, 'quantum_ai_enhancer.py');
     
     // Check if forge is available
