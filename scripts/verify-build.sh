@@ -5,7 +5,7 @@ echo "🧪 OINIO Binary Verification"
 echo "============================"
 echo ""
 
-VERSION=$(node -p "require('./config').VERSION")
+VERSION=$(node -p "require('./config.js').VERSION")
 
 # Test Linux binary (if on Linux or WSL)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
