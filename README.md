@@ -217,7 +217,7 @@ For maintainers releasing new versions:
 4. Create and push git tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
 5. GitHub Actions automatically creates release with binaries
 
-See [.github/RELEASE_CHECKLIST.md](.github/RELEASE_CHECKLIST.md) for complete checklist.
+See the maintainer release checklist in [.github/RELEASE_CHECKLIST.md](.github/RELEASE_CHECKLIST.md) (in the repository’s `.github` directory) for the complete checklist.
 
 ## 📝 Changelog
 
