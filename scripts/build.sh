@@ -17,7 +17,7 @@ if ! command -v pkg &> /dev/null; then
 fi
 
 # Get version from config.js
-VERSION=$(node -p "require('./config').VERSION")
+VERSION=$(node -p "require('./config.js').VERSION")
 echo "📌 Building version: $VERSION"
 echo ""
 
