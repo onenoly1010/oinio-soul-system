@@ -27,7 +27,7 @@ jobs:
       
       - name: Get version
         id: version
-        run: echo "VERSION=$(node -p "require('./config').VERSION")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p "require('./config.js').VERSION")" >> $GITHUB_OUTPUT
       
       - name: Build binaries
         run: |
