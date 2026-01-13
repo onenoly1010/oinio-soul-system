@@ -11,14 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized configuration system via `config.js` ([#4](https://github.com/onenoly1010/oinio-soul-system/pull/4))
 - CLI `--version` / `-v` flag to display version information
 - CLI `--help` / `-h` flag with comprehensive usage documentation
-- Environment variable configuration defined in `config.js` (phase 1, not yet fully integrated):
+- Environment variable configuration with runtime integration:
   - `PI_FORGE_PATH` - Custom Pi Forge Quantum Genesis location
   - `BASE_PATH` - Custom data storage directory
-  - `PBKDF2_ITERATIONS` - Configurable password hashing iterations
+  - `PBKDF2_ITERATIONS` - Configurable password hashing iterations (min 10,000)
   - `QUANTUM_TIMEOUT_MS` - Quantum enhancement timeout configuration
   - `ENABLE_QUANTUM` - Toggle quantum mode
 - Configuration section in README with environment variables table
-- Note: These environment variables are defined in `config.js` but are not yet wired into the main runtime; they are reserved for future versions and may not affect behavior in v1.3.0.
 - Phase 2 preview documentation (web deployment)
 - Build automation scripts (`scripts/build.sh`, `scripts/verify-build.sh`)
 - GitHub Actions workflow for automated releases
