@@ -79,7 +79,8 @@ test('No duplicate PATTERNS constant in oinio-system.js', () => {
   const fs = require('fs');
   const content = fs.readFileSync('oinio-system.js', 'utf8');
   // Should only have the import, not a definition
-  const matches = content.match(/const PATTERNS = \[/g);
+  // Use flexible regex to catch different coding styles
+  const matches = content.match(/(?:const|let|var)\s+PATTERNS\s*=\s*\[/g);
   assert(matches === null || matches.length === 0);
 });
 
@@ -87,7 +88,8 @@ test('No duplicate PATTERNS constant in oinio-system.js', () => {
 test('No duplicate MESSAGES constant in oinio-system.js', () => {
   const fs = require('fs');
   const content = fs.readFileSync('oinio-system.js', 'utf8');
-  const matches = content.match(/const MESSAGES = \[/g);
+  // Use flexible regex to catch different coding styles
+  const matches = content.match(/(?:const|let|var)\s+MESSAGES\s*=\s*\[/g);
   assert(matches === null || matches.length === 0);
 });
 
@@ -95,7 +97,8 @@ test('No duplicate MESSAGES constant in oinio-system.js', () => {
 test('No duplicate PATTERNS constant in oinio-forge-bridge.js', () => {
   const fs = require('fs');
   const content = fs.readFileSync('oinio-forge-bridge.js', 'utf8');
-  const matches = content.match(/const PATTERNS = \[/g);
+  // Use flexible regex to catch different coding styles
+  const matches = content.match(/(?:const|let|var)\s+PATTERNS\s*=\s*\[/g);
   assert(matches === null || matches.length === 0);
 });
 
@@ -103,7 +106,8 @@ test('No duplicate PATTERNS constant in oinio-forge-bridge.js', () => {
 test('No duplicate MESSAGES constant in oinio-forge-bridge.js', () => {
   const fs = require('fs');
   const content = fs.readFileSync('oinio-forge-bridge.js', 'utf8');
-  const matches = content.match(/const MESSAGES = \[/g);
+  // Use flexible regex to catch different coding styles
+  const matches = content.match(/(?:const|let|var)\s+MESSAGES\s*=\s*\[/g);
   assert(matches === null || matches.length === 0);
 });
 
