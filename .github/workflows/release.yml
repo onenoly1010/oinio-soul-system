@@ -34,7 +34,6 @@ jobs:
           mkdir -p dist
           pkg oinio-system.js \
             --targets node18-linux-x64,node18-macos-x64,node18-win-x64 \
-            --assets config.js,oinio-shared.js,oinio-forge-bridge.js \
             --output dist/oinio-system
       
       - name: Verify builds
