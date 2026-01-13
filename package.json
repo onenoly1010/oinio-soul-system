@@ -11,7 +11,11 @@
     "release": "echo \"Note: build and verify require a Unix-like shell on Windows (e.g., WSL or Git Bash).\" && npm run build && npm run verify"
   },
   "pkg": {
-    "assets": [],
+    "assets": [
+      "config.js",
+      "oinio-shared.js",
+      "oinio-forge-bridge.js"
+    ],
     "scripts": [],
     "targets": [
       "node18-linux-x64",
