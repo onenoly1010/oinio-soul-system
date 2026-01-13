@@ -133,7 +133,7 @@ Can integrate with AI (Pi Forge) for enhanced readings:
 - Contextual insights
 - Still deterministic at the core
 
-## 🔐 Privacy &amp; Security
+## 🔐 Privacy & Security
 
 - All data encrypted (AES-256-GCM)
 - Everything stays on your device
