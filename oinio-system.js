@@ -19,7 +19,7 @@ const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displa
 // ═══════════════════════════════════════════════════════════════
 // 📋 CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
-const { VERSION } = require('./config');
+const { VERSION, config } = require('./config');
 
 // ═══════════════════════════════════════════════════════════════
 // ⚡ QUANTUM FORGE BRIDGE (OPTIONAL ENHANCEMENT)
@@ -48,6 +48,10 @@ try {
 // 🛡️ PKG-SAFE PATH RESOLUTION
 // ═══════════════════════════════════════════════════════════════
 const getBasePath = () => {
+  // Use BASE_PATH from config if set
+  if (config.BASE_PATH) {
+    return config.BASE_PATH;
+  }
   // When running as pkg binary, use executable directory
   if (process.pkg) {
     return path.dirname(process.execPath);
@@ -117,7 +121,7 @@ function decrypt(iv, authTag, encrypted, key) {
  */
 function hashPassword(password) {
   const salt = crypto.randomBytes(32).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, config.PBKDF2_ITERATIONS, 64, 'sha512').toString('hex');
   return { salt, hash };
 }
 
@@ -128,7 +132,7 @@ function hashPassword(password) {
  */
 function deriveEncryptionKey(password, salt) {
   // Use PBKDF2 with high iteration count for better security
-  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
+  return crypto.pbkdf2Sync(password, salt, config.PBKDF2_ITERATIONS, 32, 'sha256');
 }
 
 /**
@@ -136,7 +140,7 @@ function deriveEncryptionKey(password, salt) {
  * Uses constant-time comparison to prevent timing attacks
  */
 function verifyPassword(password, salt, hash) {
-  const computedHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
+  const computedHash = crypto.pbkdf2Sync(password, salt, config.PBKDF2_ITERATIONS, 64, 'sha512');
   const storedHash = Buffer.from(hash, 'hex');
   
   // Use timingSafeEqual for constant-time comparison
@@ -1516,16 +1520,18 @@ GETTING STARTED:
   4. Begin consulting the oracle
 
 ENVIRONMENT VARIABLES:
-  (Defined for future use; not yet active in v1.3.0)
   PI_FORGE_PATH         Path to Pi Forge Quantum Genesis
   BASE_PATH             Custom data storage directory
+  PBKDF2_ITERATIONS     Password hashing iterations (default: 100000, min: 10000)
+  QUANTUM_TIMEOUT_MS    Quantum enhancement timeout (default: 5000ms)
+  ENABLE_QUANTUM        Enable/disable quantum mode (default: true)
 
 DOCUMENTATION:
   https://github.com/onenoly1010/oinio-soul-system#readme
 
 SECURITY:
   • All data encrypted with AES-256-GCM
-  • Passwords hashed with PBKDF2 (100,000 iterations)
+  • Passwords hashed with configurable PBKDF2 iterations
   • Everything stays local on your machine
   • No telemetry, no tracking
 

@@ -12,8 +12,8 @@ if ! command -v node &> /dev/null; then
 fi
 
 if ! command -v pkg &> /dev/null; then
-    echo "📦 Installing pkg globally..."
-    npm install -g pkg
+    echo "📦 Installing pkg globally (pinned version for security)..."
+    npm install -g pkg@5.8.1
 fi
 
 # Get version from config.js

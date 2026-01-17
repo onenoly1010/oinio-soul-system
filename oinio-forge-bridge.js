@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const path = require('path');
 const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displayReadingShared } = require('./oinio-shared');
+const { config } = require('./config');
 
 // ═══════════════════════════════════════════════════════════════
 // 🌌 QUANTUM FORGE INTEGRATION
@@ -20,12 +21,12 @@ const { PATTERNS, MESSAGES, generateDeterministicReading, displayReading: displa
 
 /**
  * Calls Pi Forge Quantum AI Enhancer for harmony predictions
- * Optimized with reduced timeout (3s instead of 5s)
+ * Uses configurable timeout from config
  */
 async function invokeQuantumForge(question, contextData) {
   return new Promise((resolve, reject) => {
     // Path to your pi-forge-quantum-genesis repository
-    const forgePath = process.env.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
+    const forgePath = config.PI_FORGE_PATH || '/workspaces/pi-forge-quantum-genesis';
     const pythonScript = path.join(forgePath, 'quantum_ai_enhancer.py');
     
     // Check if forge is available
@@ -74,11 +75,11 @@ async function invokeQuantumForge(question, contextData) {
       }
     });
     
-    // Reduced timeout from 5s to 3s for better performance
+    // Configurable timeout for quantum forge
     setTimeout(() => {
       python.kill();
       resolve(null);
-    }, 3000);
+    }, config.QUANTUM_TIMEOUT_MS);
   });
 }
 
