@@ -167,18 +167,13 @@ function getOrCreateUsersDbKeyMaterial() {
     }
 
     const keyMaterial = crypto.randomBytes(32).toString('hex');
-    fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
     
-    // Set restrictive permissions on Unix-like systems
+    // Set restrictive permissions atomically on Unix-like systems
     if (process.platform !== 'win32') {
-      try {
-        fs.chmodSync(USERS_DB_KEY_FILE, 0o600);
-      } catch (chmodErr) {
-        // Non-fatal: file was created but permissions couldn't be set
-        console.warn('⚠️  Warning: Could not set restrictive file permissions on key file.');
-      }
+      fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8', mode: 0o600 });
     } else {
       // Windows: Permissions work differently, manual adjustment may be required
+      fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
       console.log('💡 Note: On Windows, consider manually setting restrictive permissions on .oinio-users.key');
     }
     
