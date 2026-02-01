@@ -54,6 +54,10 @@ const getBasePath = () => {
 const BASE_PATH = getBasePath();
 const LINEAGE_FILE = path.join(BASE_PATH, 'lineage.csv');
 const USERS_FILE = path.join(BASE_PATH, 'users.enc');
+const USERS_DB_KEY_FILE = path.join(BASE_PATH, '.oinio-users.key');
+
+// Username validation pattern - alphanumeric, underscore, and hyphen only
+const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 // Soul file path will be determined per-user
 function getSoulsFilePath(username) {
@@ -61,6 +65,12 @@ function getSoulsFilePath(username) {
     // Backward compatibility: if no username, use default file
     return path.join(BASE_PATH, 'souls.enc');
   }
+
+  // Defensive validation: only allow alphanumeric, underscore, and hyphen
+  if (!USERNAME_SAFE_PATTERN.test(username)) {
+    throw new Error('Invalid username format. Only letters, numbers, underscore, and hyphen are allowed.');
+  }
+
   return path.join(BASE_PATH, `souls_${username}.enc`);
 }
 
@@ -143,15 +153,51 @@ function verifyPassword(password, salt, hash) {
 }
 
 /**
- * Master key for encrypting users database (derived from fixed system identifier)
- * This is separate from user soul encryption keys
- * Note: All installations share this key. Users.enc is primarily for preventing
- * casual access, not for protecting against determined attackers with source code access.
+ * Returns installation-specific key material for the users DB.
+ * On first run, a random secret is generated and stored on disk
+ * with restrictive permissions; subsequent runs reuse that secret.
+ * Note: File permissions (0o600) work on Unix-like systems. On Windows,
+ * file permissions are handled differently and this may not provide the same level of protection.
+ */
+function getOrCreateUsersDbKeyMaterial() {
+  try {
+    if (fs.existsSync(USERS_DB_KEY_FILE)) {
+      const existing = fs.readFileSync(USERS_DB_KEY_FILE, 'utf8');
+      return existing.trim();
+    }
+
+    const keyMaterial = crypto.randomBytes(32).toString('hex');
+    
+    // Set restrictive permissions atomically on Unix-like systems
+    if (process.platform !== 'win32') {
+      // Use openSync with mode for truly atomic permission setting
+      const fd = fs.openSync(USERS_DB_KEY_FILE, 'w', 0o600);
+      try {
+        fs.writeSync(fd, keyMaterial + '\n');
+      } finally {
+        fs.closeSync(fd);
+      }
+    } else {
+      // Windows: Permissions work differently, manual adjustment may be required
+      fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
+      console.log('💡 Note: On Windows, consider manually setting restrictive permissions on .oinio-users.key');
+    }
+    
+    return keyMaterial;
+  } catch (err) {
+    // Surface the error to the caller rather than silently falling back
+    throw new Error('Failed to initialize users database key material: ' + err.message);
+  }
+}
+
+/**
+ * Master key for encrypting users database.
+ * This is separate from user soul encryption keys.
+ * Uses installation-specific secret material stored on disk.
  */
 function getUsersDbKey() {
-  // Use a fixed identifier for the users database encryption
-  // The real security comes from per-user password-based encryption of soul data
-  return deriveKey('oinio-users-db-v1');
+  const keyMaterial = getOrCreateUsersDbKeyMaterial();
+  return deriveKey(keyMaterial);
 }
 
 /**
@@ -268,6 +314,11 @@ function authenticateUser(username, password) {
   const user = usersDb[username];
   if (!user) {
     return { success: false, error: 'Invalid username or password' };
+  }
+
+  // Validate that user object contains required fields
+  if (!user.salt || !user.hash || !user.encryptionSalt) {
+    return { success: false, error: 'User database corrupted or from older version' };
   }
   
   if (verifyPassword(password, user.salt, user.hash)) {
@@ -714,155 +765,156 @@ async function askPassphrase(rl, isFirstTime = false) {
  * User login/registration UI
  */
 async function askUsername(rl) {
-  console.log('\n👤 Enter your username:');
-  console.log('   (3-20 characters, letters, numbers, underscore, hyphen)\n');
-  
-  const username = await question(rl, '→ Username: ');
-  
-  if (!username) {
-    console.log('\n❌ Username required.\n');
-    return null;
+  while (true) {
+    console.log('\n👤 Enter your username:');
+    console.log('   (3-20 characters, letters, numbers, underscore, hyphen)\n');
+    
+    const username = await question(rl, '→ Username: ');
+    
+    if (!username) {
+      console.log('\n❌ Username required.\n');
+      return null;
+    }
+    
+    // Validate username format
+    if (username.length < 3 || username.length > 20) {
+      console.log('\n⚠️  Username must be 3-20 characters.\n');
+      continue;
+    }
+    
+    if (!USERNAME_SAFE_PATTERN.test(username)) {
+      console.log('\n⚠️  Username can only contain letters, numbers, underscore, and hyphen.\n');
+      continue;
+    }
+    
+    return username;
   }
-  
-  // Validate username format
-  if (username.length < 3 || username.length > 20) {
-    console.log('\n⚠️  Username must be 3-20 characters.\n');
-    return askUsername(rl);
-  }
-  
-  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    console.log('\n⚠️  Username can only contain letters, numbers, underscore, and hyphen.\n');
-    return askUsername(rl);
-  }
-  
-  return username;
 }
 
 /**
  * User password input with confirmation for registration
  */
 async function askUserPassword(rl, isRegistration = false) {
-  if (isRegistration) {
-    console.log('\n🔐 Create your password:\n');
-    console.log('💡 Password requirements:');
-    console.log('   • Minimum 8 characters');
-    console.log('   • Cannot be recovered if forgotten!\n');
-  } else {
-    console.log();
-  }
-  
-  const password = await question(rl, '🔐 Password: ');
-  
-  if (!password) {
-    console.log('\n❌ Password required.\n');
-    return null;
-  }
-  
-  if (password.length < 8) {
-    console.log('\n⚠️  Password must be at least 8 characters.\n');
-    return askUserPassword(rl, isRegistration);
-  }
-  
-  // If registration, ask for confirmation
-  if (isRegistration) {
-    const confirm = await question(rl, '🔐 Confirm password: ');
-    if (confirm !== password) {
-      console.log('\n❌ Passwords do not match. Try again.\n');
-      return askUserPassword(rl, isRegistration);
+  while (true) {
+    if (isRegistration) {
+      console.log('\n🔐 Create your password:\n');
+      console.log('💡 Password requirements:');
+      console.log('   • Minimum 8 characters');
+      console.log('   • Cannot be recovered if forgotten!\n');
+    } else {
+      console.log();
     }
+    
+    const password = await question(rl, '🔐 Password: ');
+    
+    if (!password) {
+      console.log('\n❌ Password required.\n');
+      return null;
+    }
+    
+    if (password.length < 8) {
+      console.log('\n⚠️  Password must be at least 8 characters.\n');
+      continue;
+    }
+    
+    // If registration, ask for confirmation
+    if (isRegistration) {
+      const confirm = await question(rl, '🔐 Confirm password: ');
+      if (confirm !== password) {
+        console.log('\n❌ Passwords do not match. Try again.\n');
+        continue;
+      }
+    }
+    
+    return password;
   }
-  
-  return password;
 }
 
 /**
  * Login/Registration screen
  */
 async function loginScreen() {
-  const rl = createInterface();
-  
-  console.log('\n┌─────────────────────────────────────┐');
-  console.log('│  Welcome to OINIO Soul System       │');
-  console.log('├─────────────────────────────────────┤');
-  console.log('│  [1] Login                          │');
-  console.log('│  [2] Create New Account             │');
-  console.log('│  [3] Exit                           │');
-  console.log('└─────────────────────────────────────┘\n');
-  
-  const choice = await question(rl, '→ ');
-  
-  switch (choice) {
-    case '1': {
-      // Login
-      const username = await askUsername(rl);
-      if (!username) {
-        rl.close();
-        return await loginScreen();
-      }
+  while (true) {
+    const rl = createInterface();
+    
+    try {
+      console.log('\n┌─────────────────────────────────────┐');
+      console.log('│  Welcome to OINIO Soul System       │');
+      console.log('├─────────────────────────────────────┤');
+      console.log('│  [1] Login                          │');
+      console.log('│  [2] Create New Account             │');
+      console.log('│  [3] Exit                           │');
+      console.log('└─────────────────────────────────────┘\n');
       
-      const password = await askUserPassword(rl, false);
-      if (!password) {
-        rl.close();
-        return await loginScreen();
-      }
+      const choice = await question(rl, '→ ');
       
-      const result = authenticateUser(username, password);
-      if (result.success) {
-        console.log('\n✅ Login successful!\n');
-        rl.close();
-        return { username, password, encryptionSalt: result.encryptionSalt };
-      } else {
-        console.log(`\n❌ ${result.error}\n`);
-        const retry = await question(rl, 'Try again? (y/n): ');
-        rl.close();
-        if (retry.toLowerCase() === 'y') {
-          return await loginScreen();
+      switch (choice) {
+      case '1': {
+        // Login
+        const username = await askUsername(rl);
+        if (!username) {
+          continue;
         }
+        
+        const password = await askUserPassword(rl, false);
+        if (!password) {
+          continue;
+        }
+        
+        const result = authenticateUser(username, password);
+        if (result.success) {
+          console.log('\n✅ Login successful!\n');
+          return { username, password, encryptionSalt: result.encryptionSalt };
+        } else {
+          console.log(`\n❌ ${result.error}\n`);
+          const retry = await question(rl, 'Try again? (y/n): ');
+          if (retry.toLowerCase() !== 'y') {
+            return null;
+          }
+          continue;
+        }
+      }
+      
+      case '2': {
+        // Registration
+        console.log('\n🌟 Create a new OINIO account\n');
+        
+        const username = await askUsername(rl);
+        if (!username) {
+          continue;
+        }
+        
+        const password = await askUserPassword(rl, true);
+        if (!password) {
+          continue;
+        }
+        
+        const result = registerUser(username, password);
+        if (result.success) {
+          console.log('\n✅ Account created successfully!\n');
+          console.log('💡 Your username:', username);
+          console.log('💡 You can now login with your credentials.\n');
+          continue;
+        } else {
+          console.log(`\n❌ ${result.error}\n`);
+          continue;
+        }
+      }
+      
+      case '3': {
+        // Exit
+        console.log('\n👋 Goodbye!\n');
         return null;
       }
-    }
-    
-    case '2': {
-      // Registration
-      console.log('\n🌟 Create a new OINIO account\n');
       
-      const username = await askUsername(rl);
-      if (!username) {
-        rl.close();
-        return await loginScreen();
+      default:
+        console.log('\n⚠️  Invalid choice. Please select 1, 2, or 3.\n');
+        continue;
       }
-      
-      const password = await askUserPassword(rl, true);
-      if (!password) {
-        rl.close();
-        return await loginScreen();
-      }
-      
-      const result = registerUser(username, password);
-      if (result.success) {
-        console.log('\n✅ Account created successfully!\n');
-        console.log('💡 Your username:', username);
-        console.log('💡 You can now login with your credentials.\n');
-        rl.close();
-        return await loginScreen();
-      } else {
-        console.log(`\n❌ ${result.error}\n`);
-        rl.close();
-        return await loginScreen();
-      }
-    }
-    
-    case '3': {
-      // Exit
-      console.log('\n👋 Goodbye!\n');
+    } finally {
+      // Ensure readline interface is always closed
       rl.close();
-      return null;
     }
-    
-    default:
-      console.log('\n⚠️  Invalid choice. Please select 1, 2, or 3.\n');
-      rl.close();
-      return await loginScreen();
   }
 }
 
@@ -1292,52 +1344,66 @@ async function runSoulMenu(soul, soulRegistry, key, username) {
 async function mainMenu() {
   displayBanner();
   
-  // User authentication
-  const userCreds = await loginScreen();
-  if (!userCreds) {
-    // User chose to exit
-    return;
-  }
-  
-  const { username, password, encryptionSalt } = userCreds;
-  
-  const rl = createInterface();
-  
-  // Use PBKDF2 with encryption salt for deriving encryption key
-  // This provides better security than simple SHA-256 hashing
-  const key = deriveEncryptionKey(password, encryptionSalt);
-  let soulRegistry = loadSouls(key, username);
-  
-  if (soulRegistry === null) {
-    // Decryption failed - shouldn't happen after successful login
-    console.log('❌ Failed to load soul data. This shouldn\'t happen.\n');
-    rl.close();
-    return;
-  }
-  
-  console.log(`✅ Welcome back, ${username}!\n`);
-  
-  // First-run welcome
-  const soulCount = Object.keys(soulRegistry).length;
-  if (soulCount === 0) {
-    console.log('🌟 Welcome to OINIO!\n');
-    console.log('💡 Quick Start:');
-    console.log('   1. Create your first soul (option 1)');
-    console.log('   2. Give it a name (e.g., "Self", "Oracle", your name)');
-    console.log('   3. Select the soul (option 2)');
-    console.log('   4. Ask your first question\n');
-    console.log('📚 Press [?] at any menu for detailed help\n');
-  } else {
-    console.log(`📊 Registry: ${soulCount} soul${soulCount === 1 ? '' : 's'} | Press [?] for help\n`);
-  }
-  
-  // Main menu loop
+  // Outer loop for authentication/re-authentication
   while (true) {
-    displayMenu();
-    const choice = await question(rl, '→ ');
+    // User authentication
+    const userCreds = await loginScreen();
+    if (!userCreds) {
+      // User chose to exit
+      return;
+    }
     
-    switch (choice.toLowerCase()) {
-      case '1': {
+    const { username, password, encryptionSalt } = userCreds;
+    
+    // Use PBKDF2 with encryption salt for deriving encryption key
+    // This provides better security than simple SHA-256 hashing
+    const key = deriveEncryptionKey(password, encryptionSalt);
+    let soulRegistry = loadSouls(key, username);
+    
+    if (soulRegistry === null) {
+      // Decryption failed after successful login — likely due to data/file issues
+      console.log('❌ Failed to load your soul data.\n');
+      console.log('   Possible causes:');
+      console.log('   • The encrypted data file was moved, deleted, or corrupted.');
+      console.log('   • File permissions changed so OINIO can no longer read/write it.');
+      console.log('   • The encryption password or environment changed since last use.\n');
+      console.log('💡 Try the following:');
+      console.log('   1. Exit and log in again, making sure you enter the exact same password.');
+      console.log('   2. Check that your soul data file is still present and readable.');
+      console.log('   3. If you use backups or sync, restore the previous version of the file.\n');
+      continue; // Return to login screen
+    }
+    
+    console.log(`✅ Welcome back, ${username}!\n`);
+    
+    // First-run welcome
+    const soulCount = Object.keys(soulRegistry).length;
+    if (soulCount === 0) {
+      console.log('🌟 Welcome to OINIO!\n');
+      console.log('💡 Quick Start:');
+      console.log('   1. Create your first soul (option 1)');
+      console.log('   2. Give it a name (e.g., "Self", "Oracle", your name)');
+      console.log('   3. Select the soul (option 2)');
+      console.log('   4. Ask your first question\n');
+      console.log('📚 Press [?] at any menu for detailed help\n');
+    } else {
+      console.log(`📊 Registry: ${soulCount} soul${soulCount === 1 ? '' : 's'} | Press [?] for help\n`);
+    }
+    
+    // Main menu loop
+    // Flag to break out of menu loop and restart authentication
+    let shouldLogout = false;
+    let rl = null;
+    
+    try {
+      rl = createInterface();
+      
+      while (!shouldLogout) {
+        displayMenu();
+        const choice = await question(rl, '→ ');
+        
+        switch (choice.toLowerCase()) {
+          case '1': {
         // Create new soul
         const name = await askSoulName(rl, Object.keys(soulRegistry));
         if (!name) {
@@ -1381,8 +1447,13 @@ async function mainMenu() {
         
         const selectedSoul = soulRegistry[soulNames[soulIndex]];
         rl.close();
-        await runSoulMenu(selectedSoul, soulRegistry, key, username);
-        return mainMenu(); // Restart main menu after soul menu exits
+        try {
+          await runSoulMenu(selectedSoul, soulRegistry, key, username);
+        } finally {
+          // Recreate readline interface after soul menu exits (or throws)
+          rl = createInterface();
+        }
+        break;
       }
       
       case '3': {
@@ -1438,11 +1509,11 @@ async function mainMenu() {
       case 'l':
       case 'logout': {
         // Logout and return to login screen
-        const shouldLogout = await confirm(rl, '\n🔄 Logout and switch user?');
-        if (shouldLogout) {
+        const logoutConfirm = await confirm(rl, '\n🔄 Logout and switch user?');
+        if (logoutConfirm) {
           console.log('\n👋 Logging out...\n');
           rl.close();
-          return mainMenu(); // Restart with login screen
+          shouldLogout = true; // Break out of menu loop to restart authentication
         }
         break;
       }
@@ -1463,7 +1534,14 @@ async function mainMenu() {
         console.log(`⚠️  Invalid choice: "${choice}"`);
         console.log('💡 Enter 1-5, [L] for logout, or [?] for help\n');
     }
-  }
+      } // End of menu loop
+    } finally {
+      // Ensure readline interface is always closed
+      if (rl) {
+        rl.close();
+      }
+    }
+  } // End of authentication loop
 }
 
 // ═══════════════════════════════════════════════════════════════
