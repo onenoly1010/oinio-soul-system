@@ -156,6 +156,8 @@ function verifyPassword(password, salt, hash) {
  * Returns installation-specific key material for the users DB.
  * On first run, a random secret is generated and stored on disk
  * with restrictive permissions; subsequent runs reuse that secret.
+ * Note: File permissions (0o600) work on Unix-like systems. On Windows,
+ * file permissions are handled differently and this may not provide the same level of protection.
  */
 function getOrCreateUsersDbKeyMaterial() {
   try {
@@ -165,6 +167,7 @@ function getOrCreateUsersDbKeyMaterial() {
     }
 
     const keyMaterial = crypto.randomBytes(32).toString('hex');
+    // Note: mode 0o600 is Unix-specific; Windows uses different file permission mechanisms
     fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8', mode: 0o600 });
     return keyMaterial;
   } catch (err) {
@@ -1382,9 +1385,10 @@ async function mainMenu() {
     let rl = createInterface();
     let shouldLogout = false;
     
-    while (!shouldLogout) {
-      displayMenu();
-      const choice = await question(rl, '→ ');
+    try {
+      while (!shouldLogout) {
+        displayMenu();
+        const choice = await question(rl, '→ ');
     
     switch (choice.toLowerCase()) {
       case '1': {
@@ -1515,7 +1519,13 @@ async function mainMenu() {
         console.log(`⚠️  Invalid choice: "${choice}"`);
         console.log('💡 Enter 1-5, [L] for logout, or [?] for help\n');
     }
-    } // End of menu loop
+      } // End of menu loop
+    } finally {
+      // Ensure readline interface is always closed
+      if (rl) {
+        rl.close();
+      }
+    }
   } // End of authentication loop
 }
 
