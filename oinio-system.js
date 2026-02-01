@@ -57,7 +57,7 @@ const USERS_FILE = path.join(BASE_PATH, 'users.enc');
 const USERS_DB_KEY_FILE = path.join(BASE_PATH, '.oinio-users.key');
 
 // Username validation pattern - alphanumeric, underscore, and hyphen only
-const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
+const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_\-]+$/;
 
 // Soul file path will be determined per-user
 function getSoulsFilePath(username) {
@@ -831,40 +831,37 @@ async function loginScreen() {
   while (true) {
     const rl = createInterface();
     
-    console.log('\n┌─────────────────────────────────────┐');
-    console.log('│  Welcome to OINIO Soul System       │');
-    console.log('├─────────────────────────────────────┤');
-    console.log('│  [1] Login                          │');
-    console.log('│  [2] Create New Account             │');
-    console.log('│  [3] Exit                           │');
-    console.log('└─────────────────────────────────────┘\n');
-    
-    const choice = await question(rl, '→ ');
+    try {
+      console.log('\n┌─────────────────────────────────────┐');
+      console.log('│  Welcome to OINIO Soul System       │');
+      console.log('├─────────────────────────────────────┤');
+      console.log('│  [1] Login                          │');
+      console.log('│  [2] Create New Account             │');
+      console.log('│  [3] Exit                           │');
+      console.log('└─────────────────────────────────────┘\n');
+      
+      const choice = await question(rl, '→ ');
     
     switch (choice) {
       case '1': {
         // Login
         const username = await askUsername(rl);
         if (!username) {
-          rl.close();
           continue;
         }
         
         const password = await askUserPassword(rl, false);
         if (!password) {
-          rl.close();
           continue;
         }
         
         const result = authenticateUser(username, password);
         if (result.success) {
           console.log('\n✅ Login successful!\n');
-          rl.close();
           return { username, password, encryptionSalt: result.encryptionSalt };
         } else {
           console.log(`\n❌ ${result.error}\n`);
           const retry = await question(rl, 'Try again? (y/n): ');
-          rl.close();
           if (retry.toLowerCase() !== 'y') {
             return null;
           }
@@ -878,13 +875,11 @@ async function loginScreen() {
         
         const username = await askUsername(rl);
         if (!username) {
-          rl.close();
           continue;
         }
         
         const password = await askUserPassword(rl, true);
         if (!password) {
-          rl.close();
           continue;
         }
         
@@ -893,11 +888,9 @@ async function loginScreen() {
           console.log('\n✅ Account created successfully!\n');
           console.log('💡 Your username:', username);
           console.log('💡 You can now login with your credentials.\n');
-          rl.close();
           continue;
         } else {
           console.log(`\n❌ ${result.error}\n`);
-          rl.close();
           continue;
         }
       }
@@ -905,14 +898,16 @@ async function loginScreen() {
       case '3': {
         // Exit
         console.log('\n👋 Goodbye!\n');
-        rl.close();
         return null;
       }
       
       default:
         console.log('\n⚠️  Invalid choice. Please select 1, 2, or 3.\n');
-        rl.close();
         continue;
+      }
+    } finally {
+      // Ensure readline interface is always closed
+      rl.close();
     }
   }
 }
