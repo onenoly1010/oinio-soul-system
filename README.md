@@ -141,13 +141,13 @@ The `npm run build` command will create three binaries in the `dist/` directory:
 ## 🔐 Security
 
 ### User Authentication
-- Passwords hashed with PBKDF2 (100,000 iterations, SHA-512, 32-byte salt)
+- Passwords hashed with PBKDF2 (100,000 iterations, SHA-512, 64-character hex salt)
 - User credentials encrypted in `users.enc` with AES-256-GCM
 - Password verification uses constant-time comparison
 
 ### Data Encryption
 - Each user's soul data encrypted separately (`souls_username.enc`)
-- User password derives AES-256 encryption key (SHA-256)
+- User password derives AES-256 encryption key via PBKDF2 (100,000 iterations, SHA-256, 32-byte salt)
 - All data encrypted with AES-256-GCM (authenticated encryption)
 - Unique IV (Initialization Vector) per encryption operation
 
