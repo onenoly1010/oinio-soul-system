@@ -57,7 +57,7 @@ const USERS_FILE = path.join(BASE_PATH, 'users.enc');
 const USERS_DB_KEY_FILE = path.join(BASE_PATH, '.oinio-users.key');
 
 // Username validation pattern - alphanumeric, underscore, and hyphen only
-const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_\-]+$/;
+const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 // Soul file path will be determined per-user
 function getSoulsFilePath(username) {
@@ -170,7 +170,10 @@ function getOrCreateUsersDbKeyMaterial() {
     
     // Set restrictive permissions atomically on Unix-like systems
     if (process.platform !== 'win32') {
-      fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8', mode: 0o600 });
+      // Use openSync with mode for truly atomic permission setting
+      const fd = fs.openSync(USERS_DB_KEY_FILE, 'w', 0o600);
+      fs.writeSync(fd, keyMaterial + '\n');
+      fs.closeSync(fd);
     } else {
       // Windows: Permissions work differently, manual adjustment may be required
       fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
@@ -1385,11 +1388,13 @@ async function mainMenu() {
     }
     
     // Main menu loop
-    let rl = createInterface();
     // Flag to break out of menu loop and restart authentication
     let shouldLogout = false;
+    let rl;
     
     try {
+      rl = createInterface();
+      
       while (!shouldLogout) {
         displayMenu();
         const choice = await question(rl, '→ ');
