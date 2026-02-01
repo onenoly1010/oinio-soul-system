@@ -167,8 +167,21 @@ function getOrCreateUsersDbKeyMaterial() {
     }
 
     const keyMaterial = crypto.randomBytes(32).toString('hex');
-    // Note: mode 0o600 is Unix-specific; Windows uses different file permission mechanisms
-    fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8', mode: 0o600 });
+    fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
+    
+    // Set restrictive permissions on Unix-like systems
+    if (process.platform !== 'win32') {
+      try {
+        fs.chmodSync(USERS_DB_KEY_FILE, 0o600);
+      } catch (chmodErr) {
+        // Non-fatal: file was created but permissions couldn't be set
+        console.warn('⚠️  Warning: Could not set restrictive file permissions on key file.');
+      }
+    } else {
+      // Windows: Permissions work differently, manual adjustment may be required
+      console.log('💡 Note: On Windows, consider manually setting restrictive permissions on .oinio-users.key');
+    }
+    
     return keyMaterial;
   } catch (err) {
     // Surface the error to the caller rather than silently falling back
@@ -1383,6 +1396,7 @@ async function mainMenu() {
     
     // Main menu loop
     let rl = createInterface();
+    // Flag to break out of menu loop and restart authentication
     let shouldLogout = false;
     
     try {
