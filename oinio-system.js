@@ -1522,9 +1522,7 @@ async function mainMenu() {
       } // End of menu loop
     } finally {
       // Ensure readline interface is always closed
-      if (rl) {
-        rl.close();
-      }
+      rl.close();
     }
   } // End of authentication loop
 }
