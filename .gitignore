@@ -2,6 +2,7 @@
 users.enc
 souls_*.enc
 lineage.csv
+.oinio-users.key
 
 # Node modules (if any)
 node_modules/
