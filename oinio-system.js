@@ -847,8 +847,8 @@ async function loginScreen() {
       console.log('└─────────────────────────────────────┘\n');
       
       const choice = await question(rl, '→ ');
-    
-    switch (choice) {
+      
+      switch (choice) {
       case '1': {
         // Login
         const username = await askUsername(rl);
@@ -1401,9 +1401,9 @@ async function mainMenu() {
       while (!shouldLogout) {
         displayMenu();
         const choice = await question(rl, '→ ');
-    
-    switch (choice.toLowerCase()) {
-      case '1': {
+        
+        switch (choice.toLowerCase()) {
+          case '1': {
         // Create new soul
         const name = await askSoulName(rl, Object.keys(soulRegistry));
         if (!name) {
