@@ -172,8 +172,11 @@ function getOrCreateUsersDbKeyMaterial() {
     if (process.platform !== 'win32') {
       // Use openSync with mode for truly atomic permission setting
       const fd = fs.openSync(USERS_DB_KEY_FILE, 'w', 0o600);
-      fs.writeSync(fd, keyMaterial + '\n');
-      fs.closeSync(fd);
+      try {
+        fs.writeSync(fd, keyMaterial + '\n');
+      } finally {
+        fs.closeSync(fd);
+      }
     } else {
       // Windows: Permissions work differently, manual adjustment may be required
       fs.writeFileSync(USERS_DB_KEY_FILE, keyMaterial + '\n', { encoding: 'utf8' });
@@ -1390,7 +1393,7 @@ async function mainMenu() {
     // Main menu loop
     // Flag to break out of menu loop and restart authentication
     let shouldLogout = false;
-    let rl;
+    let rl = null;
     
     try {
       rl = createInterface();
@@ -1444,9 +1447,12 @@ async function mainMenu() {
         
         const selectedSoul = soulRegistry[soulNames[soulIndex]];
         rl.close();
-        await runSoulMenu(selectedSoul, soulRegistry, key, username);
-        // Recreate readline interface after soul menu exits
-        rl = createInterface();
+        try {
+          await runSoulMenu(selectedSoul, soulRegistry, key, username);
+        } finally {
+          // Recreate readline interface after soul menu exits (or throws)
+          rl = createInterface();
+        }
         break;
       }
       
@@ -1531,7 +1537,9 @@ async function mainMenu() {
       } // End of menu loop
     } finally {
       // Ensure readline interface is always closed
-      rl.close();
+      if (rl) {
+        rl.close();
+      }
     }
   } // End of authentication loop
 }
