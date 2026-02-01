@@ -56,6 +56,9 @@ const LINEAGE_FILE = path.join(BASE_PATH, 'lineage.csv');
 const USERS_FILE = path.join(BASE_PATH, 'users.enc');
 const USERS_DB_KEY_FILE = path.join(BASE_PATH, '.oinio-users.key');
 
+// Username validation pattern - alphanumeric, underscore, and hyphen only
+const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 // Soul file path will be determined per-user
 function getSoulsFilePath(username) {
   if (!username) {
@@ -64,7 +67,6 @@ function getSoulsFilePath(username) {
   }
 
   // Defensive validation: only allow alphanumeric, underscore, and hyphen
-  const USERNAME_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
   if (!USERNAME_SAFE_PATTERN.test(username)) {
     throw new Error('Invalid username format. Only letters, numbers, underscore, and hyphen are allowed.');
   }
@@ -763,7 +765,7 @@ async function askUsername(rl) {
       continue;
     }
     
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+    if (!USERNAME_SAFE_PATTERN.test(username)) {
       console.log('\n⚠️  Username can only contain letters, numbers, underscore, and hyphen.\n');
       continue;
     }
